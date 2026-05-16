@@ -494,7 +494,7 @@ function PageShell({ children, onShare }: { children: React.ReactNode; onShare: 
       </div>
 
       <div style={{
-        maxWidth: "860px", margin: "0 auto",
+        maxWidth: "890px", margin: "0 auto",
         padding: "36px 48px 80px",
         boxSizing: "border-box",
       }}>

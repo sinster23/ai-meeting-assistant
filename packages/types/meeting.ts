@@ -1,4 +1,5 @@
 // packages/types/meeting.ts
+
 export interface Meeting {
   id: string;
   userId: string;
@@ -38,4 +39,25 @@ export interface MeetingStatusResponse {
   keyPoints: string[];
   actionItems: ActionItem[];
   createdAt: string;
+}
+
+// ── New types for AI search feature ───────────────────────────────────────
+
+/** A meeting referenced as a source in a search result. */
+export interface SourceMeeting {
+  meetingId: string;
+  originalFileName: string | null;
+  createdAt: string;        // ISO string over the wire
+  status: MeetingStatus;
+}
+
+/** Response from POST /search/query */
+export interface SearchResponse {
+  answer: string;
+  sources: SourceMeeting[];
+}
+
+/** Request body for POST /search/query */
+export interface SearchRequest {
+  query: string;
 }

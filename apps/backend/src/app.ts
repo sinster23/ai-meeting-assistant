@@ -1,10 +1,11 @@
-// packages/backend/src/main.ts
+// packages/backend/src/app.ts
 // Entry point — wires infra (DB, uploads dir) then starts HTTP server
 
 import "dotenv/config";
 import app from "./server";
 import { connectDB, disconnectDB } from "./config/db";
 import { ensureUploadDir } from "./utils/file";
+import { warmupEmbedding } from "./modules/search/embedding.service";
 
 const PORT = process.env.PORT ?? 4000;
 
@@ -15,7 +16,10 @@ async function bootstrap() {
   // 2. Connect to MongoDB (with retry)
   await connectDB();
 
-  // 3. Start HTTP server
+  // 3. Pre-load embedding model (downloads ~25 MB on first run, then cached)
+  await warmupEmbedding();
+
+  // 4. Start HTTP server
   const server = app.listen(PORT, () => {
     console.log(`[server] Running on http://localhost:${PORT}`);
   });
@@ -31,7 +35,7 @@ async function bootstrap() {
   }
 
   process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGINT",  () => shutdown("SIGINT"));
 }
 
 bootstrap().catch((err) => {

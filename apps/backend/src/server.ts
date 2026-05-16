@@ -6,7 +6,7 @@ import cors from "cors";
 import meetingRoutes from "./modules/meeting/meeting.routes";
 import recordingRoutes from "./modules/recording/recording.routes";
 import uploadRoutes from "./modules/upload/upload.routes";
-import { uploadMeeting } from "./modules/meeting/meeting.service";
+import searchRouter from "./modules/search/search.routes";
 
 const app = express();
 
@@ -22,6 +22,7 @@ app.use(express.json());
 app.use("/meetings", meetingRoutes);
 app.use("/recordings", recordingRoutes);
 app.use("/uploads", uploadRoutes);
+app.use("/search", searchRouter);
 
 // ── Health check ──────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
