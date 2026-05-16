@@ -4,8 +4,9 @@ import "dotenv/config";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import meetingRoutes from "./modules/meeting/meeting.routes";
-import { ensureUploadDir } from "./utils/file";
-import { connectDB, disconnectDB } from "./config/db";
+import recordingRoutes from "./modules/recording/recording.routes";
+import uploadRoutes from "./modules/upload/upload.routes";
+import { uploadMeeting } from "./modules/meeting/meeting.service";
 
 const app = express();
 
@@ -19,6 +20,8 @@ app.use(express.json());
 
 // ── Routes ────────────────────────────────────────────────────────────────
 app.use("/meetings", meetingRoutes);
+app.use("/recordings", recordingRoutes);
+app.use("/uploads", uploadRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => res.json({ status: "ok" }));

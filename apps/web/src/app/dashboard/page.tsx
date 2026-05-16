@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const totalActionItems = 0;
 
   function handleUploadSuccess(meetingId: string) {
-    router.push(`/meetings/${meetingId}`);
+    router.push(`/dashboard/meetings/${meetingId}`);
   }
 
   return (

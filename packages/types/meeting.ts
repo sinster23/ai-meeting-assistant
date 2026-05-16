@@ -1,3 +1,4 @@
+// packages/types/meeting.ts
 export interface Meeting {
   id: string;
   userId: string;

@@ -57,7 +57,7 @@ export function UploadModal({ onClose }: UploadModalProps) {
 
   const { mutate: upload, isPending, isError, error: uploadError, reset } = useUploadMeeting({
     onSuccess: (data) => {
-      router.push(`/meetings/${data.meetingId}`);
+      router.push(`/dashboard/meetings/${data.meetingId}`);
       onClose();
     },
   });

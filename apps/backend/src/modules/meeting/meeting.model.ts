@@ -17,6 +17,8 @@ export interface IMeeting extends Document {
   originalFileName?: string;
   createdAt: Date;
   updatedAt: Date;
+  durationSeconds?: number;
+fileSizeBytes?: number;
 }
 
 const ActionItemSchema = new Schema<ActionItem>(
@@ -46,6 +48,8 @@ const MeetingSchema = new Schema<IMeeting>(
       enum: ["recording", "upload"],
       default: "recording",
     },
+    durationSeconds: { type: Number, default: null },
+fileSizeBytes:   { type: Number, default: null },
     originalFileName: { type: String },
   },
   { timestamps: true }
