@@ -1,22 +1,15 @@
 // apps/web/hooks/recording/useRecordingsList.ts
-
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { RecordingListItem } from "@repo/types";
-
-async function getRecordingsList(): Promise<RecordingListItem[]> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/recordings`
-  );
-  if (!res.ok) throw new Error("Failed to fetch recordings");
-  return res.json();
-}
+import { recordingApi } from "@/lib/api";
+import type { RecordingListItem } from "@repo/types"; // single source — @repo/types/recording.ts
 
 export function useRecordingsList() {
-  return useQuery({
+  return useQuery<RecordingListItem[]>({
     queryKey: ["recordings"],
-    queryFn: getRecordingsList,
-    refetchInterval: 10_000,
+    queryFn: recordingApi.list,
+    placeholderData: [],
+    refetchInterval: 15_000,
   });
 }

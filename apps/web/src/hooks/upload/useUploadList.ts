@@ -1,20 +1,15 @@
+// apps/web/hooks/upload/useUploadsList.ts
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { RecordingListItem } from "@repo/types";
-
-async function getUploadsList(): Promise<RecordingListItem[]> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/uploads`
-  );
-  if (!res.ok) throw new Error("Failed to fetch uploads");
-  return res.json();
-}
+import { uploadApi } from "@/lib/api";
+import type { RecordingListItem } from "@repo/types"; // single source — @repo/types/recording.ts
 
 export function useUploadsList() {
-  return useQuery({
+  return useQuery<RecordingListItem[]>({
     queryKey: ["uploads"],
-    queryFn: getUploadsList,
-    refetchInterval: 10_000,
+    queryFn: uploadApi.list,
+    placeholderData: [],
+    refetchInterval: 15_000,
   });
 }

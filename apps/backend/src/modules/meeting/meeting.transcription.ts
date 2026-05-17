@@ -1,9 +1,9 @@
 // packages/backend/src/modules/meeting/meeting.transcription.ts
 //
 // Changes vs original:
-//   • After summarisation succeeds, calls chunkAndEmbedTranscript() so the
-//     meeting is immediately searchable.
-//   • Embedding failure is non-fatal: logged as a warning, pipeline continues.
+//   • runTranscription now accepts userId as a third parameter (from session)
+//   • userId passed directly to chunkAndEmbedTranscript instead of being
+//     fetched from the DB mid-pipeline
 
 import path from "path";
 import fs from "fs/promises";
@@ -13,14 +13,12 @@ import ffmpegStatic from "ffmpeg-static";
 import { BatchClient } from "@speechmatics/batch-client";
 import { MeetingModel } from "./meeting.model";
 
-// Point fluent-ffmpeg at the bundled binary — no PATH dependency
 if (ffmpegStatic) ffmpeg.setFfmpegPath(ffmpegStatic);
 
 // ── Audio conversion ───────────────────────────────────────────────────────
 
 function convertToMp3(inputPath: string): Promise<string> {
   const outputPath = inputPath.replace(/\.\w+$/, ".mp3");
-
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
       .audioFrequency(16000)
@@ -44,9 +42,7 @@ async function transcribeWithSpeechmatics(audioPath: string): Promise<string> {
   const blob = await openAsBlob(audioPath);
   const file = new File([blob], path.basename(audioPath));
 
-  console.info(
-    `[transcription] Sending file: ${file.name}, size: ${file.size} bytes`
-  );
+  console.info(`[transcription] Sending file: ${file.name}, size: ${file.size} bytes`);
 
   const response = await client.transcribe(
     file,
@@ -60,18 +56,14 @@ async function transcribeWithSpeechmatics(audioPath: string): Promise<string> {
     "json-v2"
   );
 
-  console.info(
-    "[transcription] Raw Speechmatics response:",
-    JSON.stringify(response, null, 2)
-  );
+  console.info("[transcription] Raw Speechmatics response:", JSON.stringify(response, null, 2));
 
   if (typeof response === "string") return response.trim();
 
   const results = response.results ?? [];
   return results
-    .map(
-      (r: { alternatives?: { content: string }[]; type: string }) =>
-        r.alternatives?.[0]?.content ?? ""
+    .map((r: { alternatives?: { content: string }[]; type: string }) =>
+      r.alternatives?.[0]?.content ?? ""
     )
     .join(" ")
     .replace(/\s([.,!?;:])/g, "$1")
@@ -88,7 +80,8 @@ async function cleanupFiles(paths: string[]): Promise<void> {
 
 export async function runTranscription(
   meetingId: string,
-  audioPath: string
+  audioPath: string,
+  userId: string,        // ← added; passed from session via meeting.service
 ): Promise<void> {
   const tempFiles: string[] = [];
 
@@ -120,13 +113,7 @@ export async function runTranscription(
       status: "completed",
       transcript,
     });
-    console.info(
-      `[transcription] Meeting ${meetingId} done. Chars: ${transcript.length}`
-    );
-
-    // Retrieve userId for this meeting — needed for embedding isolation
-    const meeting = await MeetingModel.findById(meetingId).select("userId").lean();
-    const userId = meeting?.userId ?? "anonymous";
+    console.info(`[transcription] Meeting ${meetingId} done. Chars: ${transcript.length}`);
 
     // ── Summarisation ──────────────────────────────────────────────────────
     try {
@@ -135,8 +122,8 @@ export async function runTranscription(
 
       if (summaryResult) {
         await MeetingModel.findByIdAndUpdate(meetingId, {
-          summary: summaryResult.summary,
-          keyPoints: summaryResult.keyPoints,
+          summary:     summaryResult.summary,
+          keyPoints:   summaryResult.keyPoints,
           actionItems: summaryResult.actionItems,
         });
         console.info(
@@ -148,14 +135,14 @@ export async function runTranscription(
       // Non-fatal — continue to embedding
     }
 
-    // ── Chunking + embedding (enables AI search) ───────────────────────────
+    // ── Chunking + embedding ───────────────────────────────────────────────
     try {
       const { chunkAndEmbedTranscript } = await import("../search/search.service");
-      await chunkAndEmbedTranscript(meetingId, userId, transcript);
+      await chunkAndEmbedTranscript(meetingId, userId, transcript); // ← userId from param
       console.info(`[transcription] Embedding complete for meeting ${meetingId}`);
     } catch (err) {
-      // Non-fatal — search won't work for this meeting but transcript/summary are saved
       console.error("[transcription] Embedding pipeline failed:", err);
+      // Non-fatal
     }
   } catch (err) {
     console.error(`[transcription] Unexpected error for ${meetingId}:`, err);

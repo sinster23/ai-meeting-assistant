@@ -1,15 +1,25 @@
 // packages/backend/src/modules/upload/upload.routes.ts
+//
+// Changes vs original:
+//   • requireAuth applied to all routes
+//   • userId sourced from req.user.id (session) — "anonymous" removed everywhere
 
 import { Router, Request, Response, NextFunction } from "express";
 import { MeetingModel } from "../meeting/meeting.model";
+import { requireAuth } from "../auth/auth.middleware";
 
 const router = Router();
+
+router.use(requireAuth);
 
 // ── GET /uploads ──────────────────────────────────────────────────────────
 
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const uploads = await MeetingModel.find({ userId: "anonymous", source: "upload" })
+    const uploads = await MeetingModel.find({
+      userId: req.user.id,
+      source: "upload",
+    })
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
@@ -35,19 +45,16 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 
 router.get("/stats", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const uploads = await MeetingModel.find({ userId: "anonymous", source: "upload" }).lean();
+    const uploads = await MeetingModel.find({
+      userId: req.user.id,
+      source: "upload",
+    }).lean();
 
-    const totalRecordings     = uploads.length;
-    const totalDurationSeconds = uploads.reduce(
-      (sum, m) => sum + ((m as any).durationSeconds ?? 0),
-      0
-    );
-    const totalSizeBytes = uploads.reduce(
-      (sum, m) => sum + ((m as any).fileSizeBytes ?? 0),
-      0
-    );
-
-    res.json({ totalRecordings, totalDurationSeconds, totalSizeBytes });
+    res.json({
+      totalRecordings:      uploads.length,
+      totalDurationSeconds: uploads.reduce((s, m) => s + ((m as any).durationSeconds ?? 0), 0),
+      totalSizeBytes:       uploads.reduce((s, m) => s + ((m as any).fileSizeBytes ?? 0), 0),
+    });
   } catch (err) {
     next(err);
   }
@@ -58,8 +65,8 @@ router.get("/stats", async (req: Request, res: Response, next: NextFunction) => 
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const upload = await MeetingModel.findOne({
-      _id: req.params.id,
-      userId: "anonymous",
+      _id:    req.params.id,
+      userId: req.user.id,
       source: "upload",
     }).lean();
 
@@ -88,8 +95,8 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
 router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const upload = await MeetingModel.findOneAndDelete({
-      _id: req.params.id,
-      userId: "anonymous",
+      _id:    req.params.id,
+      userId: req.user.id,
       source: "upload",
     }).lean();
 
@@ -109,7 +116,7 @@ router.delete("/:id", async (req: Request, res: Response, next: NextFunction) =>
 router.post("/:id/retry", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const upload = await MeetingModel.findOneAndUpdate(
-      { _id: req.params.id, userId: "anonymous", source: "upload" },
+      { _id: req.params.id, userId: req.user.id, source: "upload" },
       { $set: { status: "processing" } },
       { new: true }
     ).lean();
@@ -119,7 +126,6 @@ router.post("/:id/retry", async (req: Request, res: Response, next: NextFunction
       return;
     }
 
-    // TODO: enqueue reprocessing job here
     res.json({
       recordingId: (upload._id as unknown as { toString(): string }).toString(),
       status:      upload.status,

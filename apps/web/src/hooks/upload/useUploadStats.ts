@@ -1,20 +1,14 @@
+// apps/web/hooks/upload/useUploadsStats.ts
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { StorageStats } from "@repo/types";
-
-async function getUploadsStats(): Promise<StorageStats> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/uploads/stats`
-  );
-  if (!res.ok) throw new Error("Failed to fetch uploads stats");
-  return res.json();
-}
+import { uploadApi } from "@/lib/api";
+import type { StorageStats } from "@repo/types"; // single source — @repo/types
 
 export function useUploadsStats() {
-  return useQuery({
+  return useQuery<StorageStats>({
     queryKey: ["uploads-stats"],
-    queryFn: getUploadsStats,
+    queryFn: uploadApi.stats,
     refetchInterval: 30_000,
   });
 }

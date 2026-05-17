@@ -1,44 +1,38 @@
 // packages/backend/src/modules/meeting/meeting.routes.ts
+//
+// Changes vs original:
+//   • requireAuth middleware applied to all routes
+//   • userId sourced from req.user.id (session), never from request body
 
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { uploadMeeting } from "./meeting.service";
 import { MeetingModel } from "./meeting.model";
+import { requireAuth } from "../auth/auth.middleware";
 
 const router = Router();
 
+// ── Apply auth to ALL meeting routes ──────────────────────────────────────
+// Every endpoint in this file now requires a valid session.
+router.use(requireAuth);
+
 // ── Multer config ─────────────────────────────────────────────────────────
-// Accepts both audio and video — ffmpeg handles audio extraction downstream
 
 const ALLOWED_MIME_BASES = [
-  "audio/webm",
-  "audio/ogg",
-  "audio/mp4",
-  "audio/mpeg",
-  "audio/wav",
-  "audio/x-wav",
-  "audio/m4a",
-  "audio/x-m4a",
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-  "video/x-msvideo",
-  "video/mpeg",
+  "audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg",
+  "audio/wav",  "audio/x-wav", "audio/m4a", "audio/x-m4a",
+  "video/mp4",  "video/webm",  "video/quicktime",
+  "video/x-msvideo", "video/mpeg",
 ];
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 100 * 1024 * 1024, // 100 MB
-    files: 1,
-  },
+  limits:  { fileSize: 100 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => {
     const base = file.mimetype.split(";")[0].trim().toLowerCase();
-    if (ALLOWED_MIME_BASES.includes(base)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Unsupported file type: ${file.mimetype}`));
-    }
+    ALLOWED_MIME_BASES.includes(base)
+      ? cb(null, true)
+      : cb(new Error(`Unsupported file type: ${file.mimetype}`));
   },
 });
 
@@ -54,7 +48,6 @@ router.post(
         return;
       }
 
-      // Distinguish recording blobs from manual uploads via optional header
       const source =
         req.headers["x-upload-source"] === "recording" ? "recording" : "upload";
 
@@ -62,7 +55,8 @@ router.post(
         req.file.buffer,
         req.file.mimetype,
         req.file.originalname,
-        source
+        source,
+        req.user.id,     // ← from session, not body
       );
 
       res.status(201).json(result);
@@ -76,19 +70,19 @@ router.post(
 
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const meetings = await MeetingModel.find({ userId: "anonymous" })
+    const meetings = await MeetingModel.find({ userId: req.user.id })
       .sort({ createdAt: -1 })
       .limit(50)
       .lean();
 
     res.json(
       meetings.map((m) => ({
-        meetingId: (m._id as unknown as { toString(): string }).toString(),
-        status: m.status,
-        summary: m.summary ?? null,
-        source: m.source ?? "recording",
+        meetingId:        (m._id as unknown as { toString(): string }).toString(),
+        status:           m.status,
+        summary:          m.summary ?? null,
+        source:           m.source ?? "recording",
         originalFileName: m.originalFileName ?? null,
-        createdAt: m.createdAt,
+        createdAt:        m.createdAt,
       }))
     );
   } catch (err) {
@@ -100,7 +94,11 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const meeting = await MeetingModel.findById(req.params.id).lean();
+    // Scope by userId to prevent accessing other users' meetings
+    const meeting = await MeetingModel.findOne({
+      _id:    req.params.id,
+      userId: req.user.id,
+    }).lean();
 
     if (!meeting) {
       res.status(404).json({ error: "Meeting not found." });
@@ -108,15 +106,15 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
     }
 
     res.json({
-      meetingId: (meeting._id as unknown as { toString(): string }).toString(),
-      status: meeting.status,
-      transcript: meeting.transcript ?? null,
-      summary: meeting.summary ?? null,
-      keyPoints: meeting.keyPoints ?? [],
-      actionItems: meeting.actionItems ?? [],
-      source: meeting.source ?? "recording",
+      meetingId:        (meeting._id as unknown as { toString(): string }).toString(),
+      status:           meeting.status,
+      transcript:       meeting.transcript ?? null,
+      summary:          meeting.summary ?? null,
+      keyPoints:        meeting.keyPoints ?? [],
+      actionItems:      meeting.actionItems ?? [],
+      source:           meeting.source ?? "recording",
       originalFileName: meeting.originalFileName ?? null,
-      createdAt: meeting.createdAt,
+      createdAt:        meeting.createdAt,
     });
   } catch (err) {
     next(err);

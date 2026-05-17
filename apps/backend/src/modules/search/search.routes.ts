@@ -1,20 +1,20 @@
 // packages/backend/src/modules/search/search.routes.ts
+//
+// Changes vs original:
+//   • requireAuth applied — search is scoped to the authenticated user
+//   • userId sourced from req.user.id (session), not hardcoded "anonymous"
 
 import { Router, Request, Response, NextFunction } from "express";
 import { searchMeetings } from "./search.service";
+import { requireAuth } from "../auth/auth.middleware";
 
 const router = Router();
 
 // ── POST /search/query ────────────────────────────────────────────────────
-//
-// Body: { query: string }
-// Response: { answer: string, sources: SourceMeeting[] }
-//
-// Currently userId is hardcoded to "anonymous" (matching the rest of the
-// codebase). Swap for req.user.id once auth is added.
 
 router.post(
   "/query",
+  requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const query: unknown = req.body?.query;
@@ -23,20 +23,12 @@ router.post(
         res.status(400).json({ error: "query must be a non-empty string." });
         return;
       }
-
       if (query.length > 1000) {
         res.status(400).json({ error: "query must be 1000 characters or fewer." });
         return;
       }
 
-      // Sanitize — strip leading/trailing whitespace; keep original otherwise
-      const sanitizedQuery = query.trim();
-
-      // userId = "anonymous" until auth is implemented
-      const userId = "anonymous";
-
-      const result = await searchMeetings(sanitizedQuery, userId);
-
+      const result = await searchMeetings(query.trim(), req.user.id);
       res.json(result);
     } catch (err) {
       next(err);
