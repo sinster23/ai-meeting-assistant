@@ -1,11 +1,15 @@
 // apps/web/app/meetings/[meetingId]/page.tsx
+//
+// Layout: main content left + collapsible AI chat sidebar right
+// Sidebar is toggled via the "Chat" tab button and an X close button
+// No color/theme changes — same #fafafa / #111 / white aesthetic
 
 "use client";
 
-import { use, useState } from "react";
-import { useRouter } from "next/navigation";
+import { use, useState, useEffect, useRef, useCallback } from "react";
 import { useMeetingStatus } from "@/hooks/meeting/useMeetingStatus";
-import type { MeetingStatus, ActionItem } from "@repo/types";
+import { useChatSession } from "@/hooks/meeting/useChat";
+import type { ActionItem } from "@repo/types";
 
 interface Props {
   params: Promise<{ meetingId: string }>;
@@ -13,56 +17,40 @@ interface Props {
 
 const font = "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif";
 
-type Tab = "transcribe" | "summary" | "chat";
+type Tab = "transcribe" | "summary";
 
-// ── Markdown renderer ──────────────────────────────────────────────────────
+// ── Sidebar width ──────────────────────────────────────────────────────────
+const SIDEBAR_W = 360;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Markdown helpers (unchanged from original)
+// ─────────────────────────────────────────────────────────────────────────────
 
 function renderMarkdown(text: string): React.ReactNode {
   const lines = text.split("\n");
   const nodes: React.ReactNode[] = [];
   let i = 0;
-
   while (i < lines.length) {
     const line = lines[i];
-
     if (line.trim() === "") { i++; continue; }
-
     if (/^# /.test(line)) {
-      nodes.push(
-        <h2 key={i} style={{ fontSize: "16px", fontWeight: "700", color: "#111", fontFamily: font, margin: "0 0 10px", letterSpacing: "-0.01em" }}>
-          {inlineMarkdown(line.replace(/^# /, ""))}
-        </h2>
-      );
+      nodes.push(<h2 key={i} style={{ fontSize: "16px", fontWeight: "700", color: "#111", fontFamily: font, margin: "0 0 10px", letterSpacing: "-0.01em" }}>{inlineMarkdown(line.replace(/^# /, ""))}</h2>);
       i++; continue;
     }
-
     if (/^## /.test(line)) {
-      nodes.push(
-        <h3 key={i} style={{ fontSize: "14px", fontWeight: "700", color: "#222", fontFamily: font, margin: "16px 0 6px" }}>
-          {inlineMarkdown(line.replace(/^## /, ""))}
-        </h3>
-      );
+      nodes.push(<h3 key={i} style={{ fontSize: "14px", fontWeight: "700", color: "#222", fontFamily: font, margin: "16px 0 6px" }}>{inlineMarkdown(line.replace(/^## /, ""))}</h3>);
       i++; continue;
     }
-
     if (/^### /.test(line)) {
-      nodes.push(
-        <h4 key={i} style={{ fontSize: "13px", fontWeight: "700", color: "#333", fontFamily: font, margin: "14px 0 4px" }}>
-          {inlineMarkdown(line.replace(/^### /, ""))}
-        </h4>
-      );
+      nodes.push(<h4 key={i} style={{ fontSize: "13px", fontWeight: "700", color: "#333", fontFamily: font, margin: "14px 0 4px" }}>{inlineMarkdown(line.replace(/^### /, ""))}</h4>);
       i++; continue;
     }
-
     if (/^[\*\-•] /.test(line)) {
-      const listItems: string[] = [];
-      while (i < lines.length && /^[\*\-•] /.test(lines[i])) {
-        listItems.push(lines[i].replace(/^[\*\-•] /, ""));
-        i++;
-      }
+      const items: string[] = [];
+      while (i < lines.length && /^[\*\-•] /.test(lines[i])) { items.push(lines[i].replace(/^[\*\-•] /, "")); i++; }
       nodes.push(
         <ul key={`ul-${i}`} style={{ margin: "6px 0 10px", padding: 0, listStyle: "none" }}>
-          {listItems.map((item, idx) => (
+          {items.map((item, idx) => (
             <li key={idx} style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "14px", color: "#444", lineHeight: 1.75, fontFamily: font, marginBottom: "2px" }}>
               <span style={{ color: "#aaa", flexShrink: 0, marginTop: "1px" }}>•</span>
               <span>{inlineMarkdown(item)}</span>
@@ -72,16 +60,12 @@ function renderMarkdown(text: string): React.ReactNode {
       );
       continue;
     }
-
     if (/^\d+\. /.test(line)) {
-      const listItems: string[] = [];
-      while (i < lines.length && /^\d+\. /.test(lines[i])) {
-        listItems.push(lines[i].replace(/^\d+\. /, ""));
-        i++;
-      }
+      const items: string[] = [];
+      while (i < lines.length && /^\d+\. /.test(lines[i])) { items.push(lines[i].replace(/^\d+\. /, "")); i++; }
       nodes.push(
         <ol key={`ol-${i}`} style={{ margin: "6px 0 10px", padding: 0, listStyle: "none" }}>
-          {listItems.map((item, idx) => (
+          {items.map((item, idx) => (
             <li key={idx} style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "14px", color: "#444", lineHeight: 1.75, fontFamily: font, marginBottom: "2px" }}>
               <span style={{ color: "#aaa", flexShrink: 0, minWidth: "16px", marginTop: "1px", fontSize: "13px" }}>{idx + 1}.</span>
               <span>{inlineMarkdown(item)}</span>
@@ -91,57 +75,37 @@ function renderMarkdown(text: string): React.ReactNode {
       );
       continue;
     }
-
-    if (/^\*\*[^*]+\*\*:?$/.test(line.trim())) {
-      nodes.push(
-        <p key={i} style={{ fontSize: "14px", fontWeight: "700", color: "#222", fontFamily: font, margin: "14px 0 4px", lineHeight: 1.6 }}>
-          {inlineMarkdown(line.trim())}
-        </p>
-      );
-      i++; continue;
-    }
-
-    nodes.push(
-      <p key={i} style={{ fontSize: "14px", color: "#444444", lineHeight: 1.8, fontFamily: font, margin: "0 0 10px" }}>
-        {inlineMarkdown(line)}
-      </p>
-    );
+    nodes.push(<p key={i} style={{ fontSize: "14px", color: "#444444", lineHeight: 1.8, fontFamily: font, margin: "0 0 10px" }}>{inlineMarkdown(line)}</p>);
     i++;
   }
-
   return <>{nodes}</>;
 }
 
 function inlineMarkdown(text: string): React.ReactNode {
   const parts: React.ReactNode[] = [];
   const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
-  let last = 0;
-  let match: RegExpExecArray | null;
-
+  let last = 0; let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
     if (match.index > last) parts.push(text.slice(last, match.index));
     const raw = match[0];
-    if (raw.startsWith("**")) {
-      parts.push(<strong key={match.index} style={{ fontWeight: "700", color: "#222" }}>{raw.slice(2, -2)}</strong>);
-    } else if (raw.startsWith("*")) {
-      parts.push(<em key={match.index} style={{ fontStyle: "italic" }}>{raw.slice(1, -1)}</em>);
-    } else if (raw.startsWith("`")) {
-      parts.push(<code key={match.index} style={{ fontFamily: "monospace", fontSize: "12px", background: "#f5f5f5", padding: "1px 5px", borderRadius: "4px", color: "#555" }}>{raw.slice(1, -1)}</code>);
-    }
+    if (raw.startsWith("**")) parts.push(<strong key={match.index} style={{ fontWeight: "700", color: "#222" }}>{raw.slice(2, -2)}</strong>);
+    else if (raw.startsWith("*")) parts.push(<em key={match.index} style={{ fontStyle: "italic" }}>{raw.slice(1, -1)}</em>);
+    else if (raw.startsWith("`")) parts.push(<code key={match.index} style={{ fontFamily: "monospace", fontSize: "12px", background: "#f5f5f5", padding: "1px 5px", borderRadius: "4px", color: "#555" }}>{raw.slice(1, -1)}</code>);
     last = match.index + raw.length;
   }
-
   if (last < text.length) parts.push(text.slice(last));
   return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : <>{parts}</>;
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Page
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function MeetingPage({ params }: Props) {
   const { meetingId } = use(params);
-  const router = useRouter();
   const { data, isLoading, isError } = useMeetingStatus(meetingId);
   const [activeTab, setActiveTab] = useState<Tab>("summary");
+  const [chatOpen, setChatOpen] = useState(true);
   const [copied, setCopied] = useState(false);
 
   function handleCopySummary() {
@@ -152,183 +116,545 @@ export default function MeetingPage({ params }: Props) {
     }
   }
 
-  if (isLoading) {
-    return (
-      <PageShell onShare={() => {}}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "320px" }}>
-          <SpinnerSVG size={24} />
-        </div>
-      </PageShell>
-    );
-  }
+  if (isLoading) return (
+    <PageShell chatOpen={chatOpen}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "320px" }}>
+        <SpinnerSVG size={24} />
+      </div>
+    </PageShell>
+  );
 
-  if (isError || !data) {
-    return (
-      <PageShell onShare={() => {}}>
-        <p style={{ fontSize: "14px", color: "#dc2626", fontFamily: font, padding: "48px 0" }}>
-          Could not load meeting.
-        </p>
-      </PageShell>
-    );
-  }
+  if (isError || !data) return (
+    <PageShell chatOpen={chatOpen}>
+      <p style={{ fontSize: "14px", color: "#dc2626", fontFamily: font, padding: "48px 0" }}>Could not load meeting.</p>
+    </PageShell>
+  );
 
   const isPending = data.status === "uploaded" || data.status === "processing";
   const isCompleted = data.status === "completed";
-
-  const meetingTitle = (data as any).title ?? "Untitled Meeting";
+  const meetingTitle = (data as any).originalFileName ?? "Untitled Meeting";
   const meetingDate = (data as any).createdAt
     ? new Date((data as any).createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
     : null;
   const meetingTime = (data as any).createdAt
     ? new Date((data as any).createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     : null;
-  const durationMin = (data as any).durationSeconds
-    ? Math.round((data as any).durationSeconds / 60)
-    : null;
+  const durationMin = (data as any).durationSeconds ? Math.round((data as any).durationSeconds / 60) : null;
 
   return (
-    <PageShell onShare={() => {}}>
+    // Root: full viewport, flex row
+    <div style={{ display: "flex", minHeight: "100vh", background: "#fafafa", fontFamily: font, position: "relative" }}>
 
-      {/* ── Meeting title ── */}
-      <h1 style={{
-        fontSize: "22px", fontWeight: "700", color: "#111111",
-        letterSpacing: "-0.025em", margin: "0 0 10px",
-        fontFamily: font, lineHeight: 1.25,
+      {/* ── Main content area — shrinks when sidebar open ── */}
+      <div style={{
+        flex: 1,
+        minWidth: 0,
+        transition: "padding-right 0.3s cubic-bezier(0.4,0,0.2,1)",
+        paddingRight: chatOpen ? `${SIDEBAR_W + 16}px` : "0",
       }}>
-        {meetingTitle}
-      </h1>
+        <div style={{ maxWidth: "780px", margin: "0 auto", padding: "36px 48px 80px", boxSizing: "border-box" }}>
 
-      {/* ── Meta row: status + copy button ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "24px", flexWrap: "wrap" }}>
-        {meetingDate && (
-          <span style={{ fontSize: "13px", color: "#888", fontFamily: font }}>
-            {meetingDate}{meetingTime ? ` · ${meetingTime}` : ""}
-          </span>
-        )}
-        {durationMin && (
-          <>
-            <span style={{ fontSize: "13px", color: "#ccc", fontFamily: font }}>·</span>
-            <span style={{ fontSize: "13px", color: "#888", fontFamily: font }}>{durationMin} min</span>
-          </>
-        )}
-        <StatusPill status={data.status} isPending={isPending} />
+          {/* ── Header row: title + Share ── */}
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
+            <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#111111", letterSpacing: "-0.025em", margin: 0, fontFamily: font, lineHeight: 1.25, flex: 1, marginRight: "16px" }}>
+              {meetingTitle}
+            </h1>
+            <button
+              style={{
+                display: "flex", alignItems: "center", gap: "6px",
+                padding: "7px 14px", borderRadius: "8px", cursor: "pointer",
+                fontSize: "13px", fontWeight: "500", fontFamily: font,
+                border: "1px solid #e8e8e8", background: "#ffffff",
+                color: "#555555", boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                transition: "all 0.15s", flexShrink: 0,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#f5f5f5"; e.currentTarget.style.borderColor = "#d8d8d8"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e8e8e8"; }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+              Share
+            </button>
+          </div>
 
-        {/* Copy button sits right next to status */}
-        {isCompleted && (
-          <button
-            onClick={handleCopySummary}
-            style={{
-              display: "flex", alignItems: "center", gap: "5px",
-              padding: "3px 10px", borderRadius: "6px", cursor: "pointer",
-              fontSize: "12px", fontWeight: "500", fontFamily: font,
-              border: "1px solid #e8e8e8", background: "#fff",
-              color: copied ? "#16a34a" : "#555",
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#f5f5f5"; e.currentTarget.style.borderColor = "#d8d8d8"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e8e8e8"; }}
-          >
-            {copied
-              ? <><CheckIcon /> Copied!</>
-              : <>
+          {/* ── Meta row ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "24px", flexWrap: "wrap" }}>
+            {meetingDate && (
+              <span style={{ fontSize: "13px", color: "#888", fontFamily: font }}>
+                {meetingDate}{meetingTime ? ` · ${meetingTime}` : ""}
+              </span>
+            )}
+            {durationMin && (
+              <>
+                <span style={{ fontSize: "13px", color: "#ccc" }}>·</span>
+                <span style={{ fontSize: "13px", color: "#888", fontFamily: font }}>{durationMin} min</span>
+              </>
+            )}
+            <StatusPill status={data.status} isPending={isPending} />
+            {isCompleted && (
+              <button
+                onClick={handleCopySummary}
+                style={{
+                  display: "flex", alignItems: "center", gap: "5px",
+                  padding: "3px 10px", borderRadius: "6px", cursor: "pointer",
+                  fontSize: "12px", fontWeight: "500", fontFamily: font,
+                  border: "1px solid #e8e8e8", background: "#fff",
+                  color: copied ? "#16a34a" : "#555", transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#f5f5f5"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#fff"; }}
+              >
+                {copied ? <><CheckIcon /> Copied!</> : <>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                   </svg>
                   Copy
-                </>
-            }
-          </button>
-        )}
+                </>}
+              </button>
+            )}
+          </div>
+
+          {/* ── Tabs: Transcribe | Summary | Chat (toggle) ── */}
+          <div style={{
+            display: "inline-flex", alignItems: "center",
+            background: "#f3f3f3", borderRadius: "10px",
+            padding: "3px", marginBottom: "28px", gap: "2px",
+          }}>
+            {(["transcribe", "summary"] as Tab[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "6px",
+                  padding: "7px 14px",
+                  background: activeTab === tab ? "#ffffff" : "transparent",
+                  border: "none", borderRadius: "8px", cursor: "pointer",
+                  fontSize: "13px",
+                  fontWeight: activeTab === tab ? "600" : "500",
+                  color: activeTab === tab ? "#111111" : "#888888",
+                  fontFamily: font,
+                  boxShadow: activeTab === tab ? "0 1px 3px rgba(0,0,0,0.10)" : "none",
+                  transition: "all 0.15s", whiteSpace: "nowrap",
+                }}
+              >
+                <TabIcon tab={tab} active={activeTab === tab} />
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+
+            {/* Chat toggle button */}
+            <button
+              onClick={() => setChatOpen((o) => !o)}
+              style={{
+                display: "flex", alignItems: "center", gap: "6px",
+                padding: "7px 14px",
+                background: chatOpen ? "#111111" : "transparent",
+                border: "none", borderRadius: "8px", cursor: "pointer",
+                fontSize: "13px",
+                fontWeight: chatOpen ? "600" : "500",
+                color: chatOpen ? "#ffffff" : "#888888",
+                fontFamily: font,
+                boxShadow: chatOpen ? "0 1px 3px rgba(0,0,0,0.20)" : "none",
+                transition: "all 0.2s", whiteSpace: "nowrap",
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke={chatOpen ? "#fff" : "#aaa"} strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              Chat
+            </button>
+          </div>
+
+          {/* ── Tab content ── */}
+          <div style={{ maxWidth: "620px" }}>
+            {activeTab === "summary" && (
+              <SummaryTab data={data} isPending={isPending} isCompleted={isCompleted} />
+            )}
+            {activeTab === "transcribe" && (
+              <TranscribeTab transcript={data.transcript ?? null} isPending={isPending} />
+            )}
+          </div>
+
+        </div>
       </div>
 
-      {/* ── Tabs: pill/box style ── */}
-      <div style={{
-        display: "inline-flex", alignItems: "center",
-        background: "#f3f3f3",
-        borderRadius: "10px",
-        padding: "3px",
-        marginBottom: "28px",
-        gap: "2px",
-      }}>
-        {(["transcribe", "summary", "chat"] as Tab[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              display: "flex", alignItems: "center", gap: "6px",
-              padding: "7px 14px",
-              background: activeTab === tab ? "#ffffff" : "transparent",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "13px",
-              fontWeight: activeTab === tab ? "600" : "500",
-              color: activeTab === tab ? "#111111" : "#888888",
-              fontFamily: font,
-              boxShadow: activeTab === tab ? "0 1px 3px rgba(0,0,0,0.10)" : "none",
-              transition: "all 0.15s",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <TabIcon tab={tab} active={activeTab === tab} />
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
-      </div>
+      {/* ── AI Chat sidebar ── */}
+      <ChatSidebar
+        meetingId={meetingId}
+        meetingStatus={data.status}
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+      />
 
-      {/* ── Tab content ── */}
-      <div style={{ maxWidth: "620px" }}>
-        {activeTab === "summary" && (
-          <SummaryTab data={data} isPending={isPending} isCompleted={isCompleted} />
-        )}
-        {activeTab === "transcribe" && (
-          <TranscribeTab transcript={data.transcript ?? null} isPending={isPending} />
-        )}
-        {activeTab === "chat" && <ChatTab />}
-      </div>
-
-    </PageShell>
+    </div>
   );
 }
 
-// ── Summary Tab ────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Chat Sidebar
+// ─────────────────────────────────────────────────────────────────────────────
 
-function SummaryTab({ data, isPending, isCompleted }: { data: any; isPending: boolean; isCompleted: boolean }) {
-  if (isPending) {
+const SUGGESTED = [
+  "What were the main decisions?",
+  "Who is responsible for what?",
+  "Were any deadlines mentioned?",
+  "What problems were discussed?",
+];
+
+function ChatSidebar({
+  meetingId,
+  meetingStatus,
+  open,
+  onClose,
+}: {
+  meetingId: string;
+  meetingStatus: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { messages, sendMessage, isLoading } = useChatSession(meetingId);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const [input, setInput] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isPending = meetingStatus === "uploaded" || meetingStatus === "processing";
+  const isFailed  = meetingStatus === "failed";
+  const isReady   = meetingStatus === "completed";
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  function handleSend() {
+    const msg = input.trim();
+    if (!msg || isLoading || !isReady) return;
+    sendMessage(msg);
+    setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  }
+
+  return (
+    <>
+      {/* Sidebar panel */}
+      <div style={{
+        position: "fixed",
+        top: 0,
+        right: 0,
+        width: `${SIDEBAR_W}px`,
+        height: "100vh",
+        background: "#ffffff",
+        borderLeft: "1px solid #efefef",
+        boxShadow: open ? "-4px 0 24px rgba(0,0,0,0.06)" : "none",
+        display: "flex",
+        flexDirection: "column",
+        zIndex: 40,
+        transform: open ? "translateX(0)" : `translateX(${SIDEBAR_W}px)`,
+        transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s",
+        pointerEvents: open ? "auto" : "none",
+      }}>
+
+        {/* ── Sidebar header ── */}
+        <div style={{
+          padding: "16px 16px 14px",
+          borderBottom: "1px solid #f5f5f5",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          flexShrink: 0,
+        }}>
+          <div style={{
+            width: "30px", height: "30px", borderRadius: "8px",
+            background: "#111", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+              <circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: "13px", fontWeight: "600", color: "#111", fontFamily: font, margin: 0, letterSpacing: "-0.01em" }}>
+              AI Chat
+            </p>
+            <p style={{ fontSize: "11px", color: "#aaa", fontFamily: font, margin: 0 }}>
+              {isPending ? "Available after processing" : "Grounded in this meeting"}
+            </p>
+          </div>
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            style={{
+              width: "28px", height: "28px", borderRadius: "7px",
+              border: "1px solid #efefef", background: "#fafafa",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0, transition: "background 0.15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#f0f0f0"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#fafafa"; }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* ── Messages ── */}
+        <div style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "16px",
+          display: "flex",
+          flexDirection: "column",
+        }}>
+          {messages.length === 0 ? (
+            <ChatEmptyState
+              isReady={isReady}
+              isPending={isPending}
+              isFailed={isFailed}
+              onSuggest={sendMessage}
+            />
+          ) : (
+            <>
+              {messages.map((msg) => (
+                <SidebarMessage key={msg.id} role={msg.role} content={msg.content} isStreaming={msg.isStreaming} />
+              ))}
+              <div ref={bottomRef} />
+            </>
+          )}
+        </div>
+
+        {/* ── Input ── */}
+        <div style={{
+          borderTop: "1px solid #f0f0f0",
+          padding: "12px",
+          background: "#fff",
+          flexShrink: 0,
+        }}>
+          <div style={{
+            display: "flex", alignItems: "flex-end", gap: "8px",
+            background: isReady ? "#f8f8f8" : "#fafafa",
+            border: "1px solid #e8e8e8",
+            borderRadius: "10px",
+            padding: "8px 8px 8px 12px",
+          }}>
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onInput={() => {
+                const el = textareaRef.current;
+                if (!el) return;
+                el.style.height = "auto";
+                el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+              }}
+              placeholder={
+                isPending ? "Meeting is still being analyzed…" :
+                isFailed  ? "Processing failed" :
+                "Ask anything about this meeting…"
+              }
+              disabled={!isReady || isLoading}
+              rows={1}
+              style={{
+                flex: 1, border: "none", outline: "none",
+                background: "transparent",
+                fontSize: "13px", fontFamily: font,
+                color: isReady ? "#222" : "#bbb",
+                lineHeight: 1.6, resize: "none", padding: 0,
+                letterSpacing: "-0.005em",
+                cursor: !isReady ? "not-allowed" : "text",
+              }}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || !isReady || isLoading}
+              style={{
+                width: "30px", height: "30px", borderRadius: "7px", border: "none",
+                cursor: !input.trim() || !isReady || isLoading ? "not-allowed" : "pointer",
+                background: !input.trim() || !isReady || isLoading ? "#e8e8e8" : "#111",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, transition: "background 0.15s",
+              }}
+              onMouseEnter={e => { if (input.trim() && isReady && !isLoading) e.currentTarget.style.background = "#333"; }}
+              onMouseLeave={e => { if (input.trim() && isReady && !isLoading) e.currentTarget.style.background = "#111"; }}
+            >
+              {isLoading ? (
+                <svg style={{ animation: "spin 0.75s linear infinite" }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5">
+                  <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke={!input.trim() || !isReady ? "#aaa" : "#fff"}
+                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              )}
+            </button>
+          </div>
+          <p style={{ fontSize: "11px", color: "#ccc", fontFamily: font, margin: "6px 0 0", textAlign: "center" }}>
+            Answers grounded in this meeting only
+          </p>
+        </div>
+
+      </div>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Message bubble
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SidebarMessage({ role, content, isStreaming }: { role: string; content: string; isStreaming?: boolean }) {
+  const isUser = role === "user";
+
+  if (isUser) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "40px 0" }}>
-        <SpinnerSVG size={16} />
-        <p style={{ fontSize: "14px", color: "#888", fontFamily: font, margin: 0 }}>
-          Processing your meeting — this usually takes 1–2 minutes…
-        </p>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "14px" }}>
+        <div style={{
+          maxWidth: "82%",
+          background: "#111",
+          color: "#fff",
+          borderRadius: "14px 14px 4px 14px",
+          padding: "9px 13px",
+          fontSize: "13px", lineHeight: 1.6, fontFamily: font,
+          letterSpacing: "-0.005em",
+        }}>
+          {content}
+        </div>
       </div>
     );
   }
 
-  if (data.status === "failed") {
-    return (
-      <p style={{ fontSize: "14px", color: "#dc2626", fontFamily: font, padding: "40px 0" }}>
-        ⚠ Processing failed. The audio may be too short or inaudible.
-      </p>
-    );
-  }
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "14px" }}>
+      {/* AI dot */}
+      <div style={{
+        width: "22px", height: "22px", borderRadius: "6px",
+        background: "#f0f0f0", border: "1px solid #e8e8e8",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, marginTop: "2px",
+      }}>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+          <circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>
+        </svg>
+      </div>
+      <div style={{
+        maxWidth: "84%",
+        background: "#f8f8f8",
+        border: "1px solid #efefef",
+        borderRadius: "4px 14px 14px 14px",
+        padding: "9px 13px",
+        fontSize: "13px", lineHeight: 1.75, fontFamily: font,
+        color: "#333", letterSpacing: "-0.005em",
+      }}>
+        {isStreaming ? (
+          <div style={{ display: "flex", gap: "4px", alignItems: "center", height: "18px" }}>
+            {[0, 1, 2].map(i => (
+              <span key={i} style={{
+                width: "5px", height: "5px", borderRadius: "50%", background: "#bbb",
+                display: "inline-block",
+                animation: "chatDot 1.2s ease-in-out infinite",
+                animationDelay: `${i * 0.2}s`,
+              }}/>
+            ))}
+            <style>{`@keyframes chatDot{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}`}</style>
+          </div>
+        ) : content}
+      </div>
+    </div>
+  );
+}
 
-  if (!isCompleted) return null;
+// ─────────────────────────────────────────────────────────────────────────────
+// Chat empty state
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ChatEmptyState({ isReady, isPending, isFailed, onSuggest }: {
+  isReady: boolean; isPending: boolean; isFailed: boolean; onSuggest: (q: string) => void;
+}) {
+  if (isFailed) return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", padding: "24px 0" }}>
+      <span style={{ fontSize: "20px" }}>⚠️</span>
+      <p style={{ fontSize: "13px", color: "#dc2626", fontFamily: font, margin: 0, textAlign: "center" }}>Processing failed — chat unavailable</p>
+    </div>
+  );
+
+  if (isPending) return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "24px 0" }}>
+      <svg style={{ animation: "spin 0.75s linear infinite" }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2">
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+      </svg>
+      <p style={{ fontSize: "13px", color: "#aaa", fontFamily: font, margin: 0, textAlign: "center", lineHeight: 1.5 }}>
+        Chat will be ready once processing completes
+      </p>
+    </div>
+  );
 
   return (
-    <div>
-      {data.summary && (
-        <div style={{ marginBottom: "28px" }}>
-          {renderMarkdown(data.summary)}
-        </div>
-      )}
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", paddingTop: "16px" }}>
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontSize: "13px", fontWeight: "600", color: "#333", fontFamily: font, margin: "0 0 3px", letterSpacing: "-0.01em" }}>
+          Ask anything about this meeting
+        </p>
+        <p style={{ fontSize: "12px", color: "#bbb", fontFamily: font, margin: 0 }}>Try a suggestion to get started</p>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
+        {SUGGESTED.map(q => (
+          <button
+            key={q}
+            onClick={() => onSuggest(q)}
+            style={{
+              background: "#fafafa", border: "1px solid #efefef",
+              borderRadius: "8px", padding: "9px 11px",
+              cursor: "pointer", fontSize: "12px", color: "#444",
+              fontFamily: font, textAlign: "left",
+              transition: "all 0.15s", letterSpacing: "-0.005em",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#f5f5f5"; e.currentTarget.style.color = "#111"; e.currentTarget.style.borderColor = "#e0e0e0"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#fafafa"; e.currentTarget.style.color = "#444"; e.currentTarget.style.borderColor = "#efefef"; }}
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-      {data.keyPoints && data.keyPoints.length > 0 && (
+// ─────────────────────────────────────────────────────────────────────────────
+// Summary + Transcript tabs (unchanged content, same as before)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SummaryTab({ data, isPending, isCompleted }: { data: any; isPending: boolean; isCompleted: boolean }) {
+  if (isPending) return (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "40px 0" }}>
+      <SpinnerSVG size={16} />
+      <p style={{ fontSize: "14px", color: "#888", fontFamily: font, margin: 0 }}>Processing your meeting — this usually takes 1–2 minutes…</p>
+    </div>
+  );
+  if (data.status === "failed") return (
+    <p style={{ fontSize: "14px", color: "#dc2626", fontFamily: font, padding: "40px 0" }}>⚠ Processing failed. The audio may be too short or inaudible.</p>
+  );
+  if (!isCompleted) return null;
+  return (
+    <div>
+      {data.summary && <div style={{ marginBottom: "28px" }}>{renderMarkdown(data.summary)}</div>}
+      {data.keyPoints?.length > 0 && (
         <div style={{ marginBottom: "28px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#222", fontFamily: font, margin: "0 0 8px" }}>
-            Key Discussion Points
-          </h3>
+          <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#222", fontFamily: font, margin: "0 0 8px" }}>Key Discussion Points</h3>
           <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
             {data.keyPoints.map((point: string, i: number) => (
               <li key={i} style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "14px", color: "#444", lineHeight: 1.75, fontFamily: font, marginBottom: "4px" }}>
@@ -339,15 +665,12 @@ function SummaryTab({ data, isPending, isCompleted }: { data: any; isPending: bo
           </ul>
         </div>
       )}
-
-      {data.actionItems && data.actionItems.length > 0 && (
+      {data.actionItems?.length > 0 && (
         <div style={{ marginBottom: "28px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#222", fontFamily: font, margin: "0 0 10px" }}>
-            Action Items
-          </h3>
+          <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#222", fontFamily: font, margin: "0 0 10px" }}>Action Items</h3>
           {data.actionItems.map((item: ActionItem, i: number) => (
             <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "7px 0", borderBottom: "1px solid #f0f0f0" }}>
-              <div style={{ width: "15px", height: "15px", borderRadius: "4px", border: "1.5px solid #d0d0d0", background: "#fff", flexShrink: 0, marginTop: "2px", cursor: "pointer" }} />
+              <div style={{ width: "15px", height: "15px", borderRadius: "4px", border: "1.5px solid #d0d0d0", background: "#fff", flexShrink: 0, marginTop: "2px", cursor: "pointer" }}/>
               <div style={{ flex: 1 }}>
                 <span style={{ fontSize: "14px", fontWeight: "500", color: "#222", fontFamily: font, lineHeight: 1.6 }}>{item.task}</span>
                 {(item.owner || item.deadline) && (
@@ -365,50 +688,38 @@ function SummaryTab({ data, isPending, isCompleted }: { data: any; isPending: bo
   );
 }
 
-// ── Transcribe Tab ─────────────────────────────────────────────────────────
-
 function TranscribeTab({ transcript, isPending }: { transcript: string | null; isPending: boolean }) {
-  if (isPending) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "40px 0" }}>
-        <SpinnerSVG size={16} />
-        <p style={{ fontSize: "14px", color: "#888", fontFamily: font, margin: 0 }}>Transcribing…</p>
-      </div>
-    );
-  }
-  if (!transcript) {
-    return <p style={{ fontSize: "14px", color: "#bbb", fontFamily: font, padding: "40px 0" }}>No transcript available.</p>;
-  }
+  if (isPending) return (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "40px 0" }}>
+      <SpinnerSVG size={16} />
+      <p style={{ fontSize: "14px", color: "#888", fontFamily: font, margin: 0 }}>Transcribing…</p>
+    </div>
+  );
+  if (!transcript) return <p style={{ fontSize: "14px", color: "#bbb", fontFamily: font, padding: "40px 0" }}>No transcript available.</p>;
   return (
     <div>
       {transcript.split("\n").filter(Boolean).map((line, i) => (
-        <p key={i} style={{ fontSize: "14px", color: "#444444", lineHeight: 1.85, fontFamily: font, margin: "0 0 6px" }}>
-          {line}
-        </p>
+        <p key={i} style={{ fontSize: "14px", color: "#444444", lineHeight: 1.85, fontFamily: font, margin: "0 0 6px" }}>{line}</p>
       ))}
     </div>
   );
 }
 
-// ── Chat Tab ───────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Small shared components
+// ─────────────────────────────────────────────────────────────────────────────
 
-function ChatTab() {
+function PageShell({ children, chatOpen }: { children: React.ReactNode; chatOpen: boolean }) {
   return (
-    <div style={{ padding: "48px 0", textAlign: "center" }}>
-      <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#fafafa" }}>
+      <div style={{ flex: 1, minWidth: 0, transition: "padding-right 0.3s cubic-bezier(0.4,0,0.2,1)", paddingRight: chatOpen ? `${SIDEBAR_W + 16}px` : "0" }}>
+        <div style={{ maxWidth: "780px", margin: "0 auto", padding: "36px 48px 80px", boxSizing: "border-box" }}>
+          {children}
+        </div>
       </div>
-      <p style={{ fontSize: "14px", fontWeight: "600", color: "#888", fontFamily: font, margin: "0 0 6px" }}>AI Chat — Coming Soon</p>
-      <p style={{ fontSize: "13px", color: "#bbb", fontFamily: font, margin: 0 }}>
-        Ask questions like "What did we decide about pricing?" or "Who owns deployment?"
-      </p>
     </div>
   );
 }
-
-// ── Status pill ────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   uploaded:   { label: "Preparing…",  color: "#6366f1", bg: "#eef2ff" },
@@ -420,21 +731,12 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 function StatusPill({ status, isPending }: { status: string; isPending: boolean }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.completed;
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: "5px",
-      fontSize: "11px", fontWeight: "600", color: cfg.color,
-      background: cfg.bg, padding: "3px 10px", borderRadius: "20px", fontFamily: font,
-    }}>
-      {isPending
-        ? <SpinnerSVG size={10} />
-        : <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, display: "inline-block" }} />
-      }
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "600", color: cfg.color, background: cfg.bg, padding: "3px 10px", borderRadius: "20px", fontFamily: font }}>
+      {isPending ? <SpinnerSVG size={10} /> : <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, display: "inline-block" }}/>}
       {cfg.label}
     </span>
   );
 }
-
-// ── Tab icon ───────────────────────────────────────────────────────────────
 
 function TabIcon({ tab, active }: { tab: Tab; active: boolean }) {
   const stroke = active ? "#111" : "#aaa";
@@ -445,7 +747,7 @@ function TabIcon({ tab, active }: { tab: Tab; active: boolean }) {
       <line x1="12" y1="19" x2="12" y2="22"/>
     </svg>
   );
-  if (tab === "summary") return (
+  return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
       <polyline points="14 2 14 8 20 8"/>
@@ -453,65 +755,13 @@ function TabIcon({ tab, active }: { tab: Tab; active: boolean }) {
       <line x1="16" y1="17" x2="8" y2="17"/>
     </svg>
   );
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-    </svg>
-  );
 }
-
-// ── Page shell — Share button baked in top-right ───────────────────────────
-
-function PageShell({ children, onShare }: { children: React.ReactNode; onShare: () => void }) {
-  return (
-    <main style={{ minHeight: "100vh", background: "#fafafa", fontFamily: font }}>
-      {/* Top-right Share button — fixed to page top */}
-      <div style={{
-        position: "absolute", top: "20px", right: "32px",
-        zIndex: 20,
-      }}>
-        <button
-          onClick={onShare}
-          style={{
-            display: "flex", alignItems: "center", gap: "6px",
-            padding: "7px 14px", borderRadius: "8px", cursor: "pointer",
-            fontSize: "13px", fontWeight: "500", fontFamily: font,
-            border: "1px solid #e8e8e8", background: "#ffffff",
-            color: "#555555",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-            transition: "all 0.15s",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#f5f5f5"; e.currentTarget.style.borderColor = "#d8d8d8"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e8e8e8"; }}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-          </svg>
-          Share
-        </button>
-      </div>
-
-      <div style={{
-        maxWidth: "890px", margin: "0 auto",
-        padding: "36px 48px 80px",
-        boxSizing: "border-box",
-      }}>
-        {children}
-      </div>
-    </main>
-  );
-}
-
-// ── Icons ──────────────────────────────────────────────────────────────────
 
 function SpinnerSVG({ size = 16 }: { size?: number }) {
   return (
-    <svg style={{ animation: "spin 0.75s linear infinite", display: "block" }}
-      width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5">
+    <svg style={{ animation: "spin 0.75s linear infinite", display: "block" }} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5">
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
     </svg>
   );
 }
@@ -519,7 +769,7 @@ function SpinnerSVG({ size = 16 }: { size?: number }) {
 function CheckIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
+      <polyline points="20 6 9 17 4 12"/>
     </svg>
   );
 }

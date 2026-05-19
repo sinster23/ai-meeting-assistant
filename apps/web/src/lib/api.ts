@@ -13,6 +13,7 @@ import type {
   StorageStats,
   UploadMeetingResponse,
 } from "@repo/types";
+import type { ChatResponse, ChatHistoryResponse } from "@repo/types/chat";
 
 // Re-export so hooks can import from one place if needed
 export type { RecordingListItem, StorageStats };
@@ -29,7 +30,7 @@ async function apiFetch(
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
     signal,
-    credentials: "include", // sends session cookie — required for all auth'd routes
+    credentials: "include",
     headers: { ...init.headers },
   });
 
@@ -80,11 +81,6 @@ export const meetingApi = {
   get: (meetingId: string): Promise<MeetingStatusResponse> =>
     apiJson(`/meetings/${meetingId}`),
 
-  /**
-   * Accepts File (file-picker) or Blob (recorder).
-   * Never set Content-Type manually for FormData — browser sets it with
-   * the correct multipart boundary automatically.
-   */
   upload: (
     fileOrBlob: File | Blob,
     source: "recording" | "upload",
@@ -109,6 +105,22 @@ export const meetingApi = {
       signal
     );
   },
+};
+
+// ── /meetings/:id/chat ────────────────────────────────────────────────────
+
+export const chatApi = {
+  /** Send a message and get an AI answer grounded in the meeting transcript. */
+  send: (meetingId: string, message: string): Promise<ChatResponse> =>
+    apiJson(`/meetings/${meetingId}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    }),
+
+  /** Fetch the full chat history for a meeting (for page reload restore). */
+  history: (meetingId: string): Promise<ChatHistoryResponse> =>
+    apiJson(`/meetings/${meetingId}/chat/history`),
 };
 
 // ── /recordings ───────────────────────────────────────────────────────────

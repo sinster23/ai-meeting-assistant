@@ -1,19 +1,18 @@
 // packages/backend/src/modules/meeting/meeting.routes.ts
 //
-// Changes vs original:
-//   • requireAuth middleware applied to all routes
-//   • userId sourced from req.user.id (session), never from request body
+// Changes vs previous version:
+//   • Chat router mounted at /:id/chat
 
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { uploadMeeting } from "./meeting.service";
 import { MeetingModel } from "./meeting.model";
 import { requireAuth } from "../auth/auth.middleware";
+import chatRouter from "../chat/chat.routes";
 
 const router = Router();
 
 // ── Apply auth to ALL meeting routes ──────────────────────────────────────
-// Every endpoint in this file now requires a valid session.
 router.use(requireAuth);
 
 // ── Multer config ─────────────────────────────────────────────────────────
@@ -56,14 +55,14 @@ router.post(
         req.file.mimetype,
         req.file.originalname,
         source,
-        req.user.id,     // ← from session, not body
+        req.user.id,
       );
 
       res.status(201).json(result);
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 // ── GET /meetings ─────────────────────────────────────────────────────────
@@ -83,7 +82,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
         source:           m.source ?? "recording",
         originalFileName: m.originalFileName ?? null,
         createdAt:        m.createdAt,
-      }))
+      })),
     );
   } catch (err) {
     next(err);
@@ -94,7 +93,6 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Scope by userId to prevent accessing other users' meetings
     const meeting = await MeetingModel.findOne({
       _id:    req.params.id,
       userId: req.user.id,
@@ -120,5 +118,11 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
     next(err);
   }
 });
+
+// ── Chat sub-router ───────────────────────────────────────────────────────
+// Must come AFTER /:id GET so Express evaluates specific routes first.
+// mergeParams: true in chat.routes.ts ensures :id is accessible there.
+
+router.use("/:id/chat", chatRouter);
 
 export default router;
