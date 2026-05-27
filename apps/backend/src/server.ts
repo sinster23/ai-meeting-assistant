@@ -13,6 +13,7 @@ import meetingRoutes   from "./modules/meeting/meeting.routes";
 import recordingRoutes from "./modules/recording/recording.routes";
 import uploadRoutes    from "./modules/upload/upload.routes";
 import searchRouter    from "./modules/search/search.routes";
+import integrationRoutes from "./modules/integration/integration.routes";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./modules/auth/auth.config";
 
@@ -44,6 +45,7 @@ app.use("/meetings",   meetingRoutes);
 app.use("/recordings", recordingRoutes);
 app.use("/uploads",    uploadRoutes);
 app.use("/search",     searchRouter);
+app.use("/integrations", integrationRoutes); 
 
 // ── Health check ──────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => res.json({ status: "ok" }));

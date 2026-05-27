@@ -11,7 +11,10 @@ import type {
   SearchRequest,
   SearchResponse,
   StorageStats,
-  UploadMeetingResponse,
+  UploadMeetingResponse, 
+  IntegrationStatusResponse, 
+  CalendarEventsResponse, 
+  AutomationSettings
 } from "@repo/types";
 import type { ChatResponse, ChatHistoryResponse } from "@repo/types/chat";
 
@@ -35,7 +38,7 @@ async function apiFetch(
   });
 
   if (res.status === 401) {
-    if (typeof window !== "undefined") window.location.href = "/login";
+    if (typeof window !== "undefined") window.location.href = "/";
     throw new Error("Session expired. Please log in again.");
   }
 
@@ -164,4 +167,41 @@ export const searchApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }),
+};
+
+// ── /integrations ──────────────────────────────────────────────────────────
+ 
+export const integrationApi = {
+  /** GET /integrations/status — provider catalogue + automation settings */
+  status: (): Promise<IntegrationStatusResponse> =>
+    apiJson("/integrations/status"),
+ 
+  /**
+   * GET /integrations/google/connect
+   * Returns the OAuth redirect URL — we navigate to it directly so the browser
+   * cookie is present for the session-based flow.
+   * Usage: window.location.href = integrationApi.googleConnectUrl()
+   */
+  googleConnectUrl: (): string =>
+    `${BASE_URL}/integrations/google/connect`,
+ 
+  /** DELETE /integrations/:provider/disconnect */
+  disconnect: (provider: string): Promise<{ disconnected: boolean; provider: string }> =>
+    apiJson(`/integrations/${provider}/disconnect`, { method: "DELETE" }),
+ 
+  /** GET /integrations/automation */
+  getAutomation: (): Promise<AutomationSettings> =>
+    apiJson("/integrations/automation"),
+ 
+  /** PATCH /integrations/automation — partial update */
+  updateAutomation: (updates: Partial<AutomationSettings>): Promise<AutomationSettings> =>
+    apiJson("/integrations/automation", {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(updates),
+    }),
+ 
+  /** GET /integrations/google/calendar */
+  calendarEvents: (daysAhead = 7): Promise<CalendarEventsResponse> =>
+    apiJson(`/integrations/google/calendar?daysAhead=${daysAhead}&maxResults=10`),
 };
