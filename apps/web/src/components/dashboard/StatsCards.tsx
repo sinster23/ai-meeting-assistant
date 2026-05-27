@@ -1,5 +1,16 @@
-// apps/web/components/dashboard/StatsCards.tsx
 "use client";
+
+const font = "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif";
+
+const purple = {
+  50:  "#EEEDFE",
+  100: "#CECBF6",
+  200: "#AFA9EC",
+  400: "#7F77DD",
+  600: "#534AB7",
+  800: "#3C3489",
+  900: "#26215C",
+};
 
 interface StatsCardsProps {
   totalMeetings: number;
@@ -15,7 +26,7 @@ export function StatsCards({ totalMeetings, completedMeetings, totalActionItems 
       valueLabel: null,
       subLabel: totalMeetings === 1 ? "1 session captured" : `${totalMeetings} sessions captured`,
       icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
           <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -31,7 +42,7 @@ export function StatsCards({ totalMeetings, completedMeetings, totalActionItems 
         ? "none yet"
         : `${completedMeetings} of ${totalMeetings} complete`,
       icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
           <line x1="16" y1="13" x2="8" y2="13"/>
@@ -44,9 +55,9 @@ export function StatsCards({ totalMeetings, completedMeetings, totalActionItems 
       label: "Action Items",
       value: totalActionItems,
       valueLabel: null,
-      subLabel: totalActionItems === 0 ? "none extracted yet" : `across all meetings`,
+      subLabel: totalActionItems === 0 ? "none extracted yet" : "across all meetings",
       icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 11 12 14 22 4"/>
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
         </svg>
@@ -56,22 +67,12 @@ export function StatsCards({ totalMeetings, completedMeetings, totalActionItems 
 
   return (
     <div style={{ marginBottom: "28px", marginTop: "28px" }}>
-      {/* Local storage privacy badge */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        marginBottom: "14px",
-      }}>
+      {/* Privacy badge */}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "14px" }}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
-        <span style={{
-          fontSize: "12px",
-          fontWeight: "500",
-          color: "#555555",
-          fontFamily: "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif",
-        }}>
+        <span style={{ fontSize: "12px", fontWeight: "500", color: "#555555", fontFamily: font }}>
           Everything stored locally — your data never leaves your device
         </span>
       </div>
@@ -87,22 +88,21 @@ export function StatsCards({ totalMeetings, completedMeetings, totalActionItems 
             key={stat.label}
             style={{
               background: "#ffffff",
-              border: "1px solid #e8e8e8",
+              border: `1px solid ${purple[100]}`,                    // was #e8e8e8
               borderRadius: "14px",
               padding: "18px 20px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-              fontFamily: "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif",
+              boxShadow: `0 1px 3px rgba(83,74,183,0.06)`,          // was rgba(0,0,0,0.04)
+              fontFamily: font,
               display: "flex",
               alignItems: "flex-start",
               gap: "14px",
             }}
           >
-            {/* Icon area */}
             <div style={{
               width: "34px",
               height: "34px",
               borderRadius: "50%",
-              background: "#f4f4f4",
+              background: purple[50],                                // was #f4f4f4
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -110,12 +110,11 @@ export function StatsCards({ totalMeetings, completedMeetings, totalActionItems 
             }}>
               {stat.icon}
             </div>
-
             <div>
               <div style={{
                 fontSize: "11px",
                 fontWeight: "500",
-                color: "#999999",
+                color: purple[400],                                  // was #999999
                 letterSpacing: "0.01em",
                 marginBottom: "2px",
               }}>
@@ -131,7 +130,7 @@ export function StatsCards({ totalMeetings, completedMeetings, totalActionItems 
                 {stat.valueLabel ?? stat.value}
               </div>
               {stat.subLabel && (
-                <div style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "2px" }}>
+                <div style={{ fontSize: "11px", color: purple[200], marginTop: "2px" }}>  {/* was #bbbbbb */}
                   {stat.subLabel}
                 </div>
               )}

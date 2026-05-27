@@ -1,9 +1,18 @@
-// apps/web/components/dashboard/RecentMeetings.tsx
 "use client";
 
 import Link from "next/link";
 import { SectionLabel } from "./QuickActions";
 import type { MeetingStatus } from "@repo/types";
+
+const purple = {
+  50:  "#EEEDFE",
+  100: "#CECBF6",
+  200: "#AFA9EC",
+  400: "#7F77DD",
+  600: "#534AB7",
+  800: "#3C3489",
+  900: "#26215C",
+};
 
 interface MeetingRow {
   meetingId: string;
@@ -13,10 +22,10 @@ interface MeetingRow {
 }
 
 const STATUS_CONFIG: Record<MeetingStatus, { label: string; color: string; bg: string; dot: string }> = {
-  uploaded:   { label: "Queued",     color: "#92400e", bg: "#fef3c7", dot: "#f59e0b" },
-  processing: { label: "Processing", color: "#374151", bg: "#f3f4f6", dot: "#6b7280" },
-  completed:  { label: "Completed",  color: "#065f46", bg: "#d1fae5", dot: "#10b981" },
-  failed:     { label: "Failed",     color: "#991b1b", bg: "#fee2e2", dot: "#ef4444" },
+  uploaded:   { label: "Queued",     color: purple[800], bg: purple[50],  dot: purple[600] },
+  processing: { label: "Processing", color: "#0369a1",   bg: "#e0f2fe",   dot: "#0ea5e9"   },
+  completed:  { label: "Completed",  color: "#15803d",   bg: "#dcfce7",   dot: "#16a34a"   },
+  failed:     { label: "Failed",     color: "#dc2626",   bg: "#fee2e2",   dot: "#dc2626"   },
 };
 
 function formatDate(iso: string) {
@@ -52,7 +61,7 @@ export function RecentMeetings({ meetings, isLoading }: { meetings: MeetingRow[]
         </span>
         <div style={{ marginLeft: "auto" }}>
           <Link href="/dashboard/meetings" style={{
-            fontSize: "12px", color: "#888888", textDecoration: "none", fontWeight: "500",
+            fontSize: "12px", color: purple[400], textDecoration: "none", fontWeight: "500",  // was #888888
           }}>
             View all →
           </Link>
@@ -62,34 +71,37 @@ export function RecentMeetings({ meetings, isLoading }: { meetings: MeetingRow[]
       {/* Content */}
       {isLoading ? (
         <div style={{
-          background: "#ffffff", border: "1px solid #e8e8e8",
+          background: "#ffffff",
+          border: `1px solid ${purple[100]}`,                        // was #e8e8e8
           borderRadius: "14px", overflow: "hidden",
         }}>
           {[1, 2, 3].map((i) => (
             <div key={i} style={{
               height: "52px",
-              background: i % 2 === 0 ? "#fafafa" : "#ffffff",
-              borderBottom: i < 3 ? "1px solid #f0f0f0" : "none",
+              background: i % 2 === 0 ? purple[50] : "#ffffff",     // was #fafafa / #ffffff
+              borderBottom: i < 3 ? `1px solid ${purple[50]}` : "none",  // was #f0f0f0
             }} />
           ))}
         </div>
       ) : meetings.length === 0 ? (
         <div style={{
           padding: "48px 24px", textAlign: "center",
-          background: "#ffffff", border: "1px solid #e8e8e8",
+          background: "#ffffff",
+          border: `1px solid ${purple[100]}`,                        // was #e8e8e8
           borderRadius: "14px", width: "100%", boxSizing: "border-box",
         }}>
           <div style={{ fontSize: "32px", marginBottom: "10px" }}>🎙️</div>
           <div style={{ fontSize: "14px", fontWeight: "600", color: "#111111", marginBottom: "5px" }}>
             No meetings yet
           </div>
-          <div style={{ fontSize: "12px", color: "#999999" }}>
+          <div style={{ fontSize: "12px", color: purple[400] }}>   {/* was #999999 */}
             Start recording to see your meetings here.
           </div>
         </div>
       ) : (
         <div style={{
-          background: "#ffffff", border: "1px solid #e8e8e8",
+          background: "#ffffff",
+          border: `1px solid ${purple[100]}`,                        // was #e8e8e8
           borderRadius: "14px", overflow: "hidden",
           width: "100%", boxSizing: "border-box",
         }}>
@@ -103,21 +115,21 @@ export function RecentMeetings({ meetings, isLoading }: { meetings: MeetingRow[]
                   display: "flex", alignItems: "center", gap: "14px",
                   padding: "13px 18px",
                   background: "#ffffff",
-                  borderBottom: idx < meetings.length - 1 ? "1px solid #f0f0f0" : "none",
+                  borderBottom: idx < meetings.length - 1 ? `1px solid ${purple[50]}` : "none",  // was #f0f0f0
                   textDecoration: "none",
                   transition: "background 0.1s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#fafafa")}
+                onMouseEnter={(e) => (e.currentTarget.style.background = purple[50])}   // was #fafafa
                 onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
               >
                 {/* Circle checkbox */}
                 <div style={{
                   width: "18px", height: "18px", borderRadius: "50%",
-                  border: "1.5px solid #d0d0d0",
+                  border: `1.5px solid ${purple[100]}`,              // was #d0d0d0
                   flexShrink: 0,
                 }} />
 
-                {/* Title + date */}
+                {/* Title */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontSize: "13.5px", fontWeight: "500", color: "#111111",
@@ -131,7 +143,7 @@ export function RecentMeetings({ meetings, isLoading }: { meetings: MeetingRow[]
                 </div>
 
                 {/* Timestamp */}
-                <div style={{ fontSize: "11px", color: "#bbbbbb", flexShrink: 0 }}>
+                <div style={{ fontSize: "11px", color: purple[200], flexShrink: 0 }}>  {/* was #bbbbbb */}
                   {formatDate(meeting.createdAt)}
                 </div>
 

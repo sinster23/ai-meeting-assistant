@@ -20,6 +20,16 @@ import type { RecordingStatus } from "@repo/types";
 
 const font = "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif";
 
+const purple = {
+  50:  "#EEEDFE",
+  100: "#CECBF6",
+  200: "#AFA9EC",
+  400: "#7F77DD",
+  600: "#534AB7",
+  800: "#3C3489",
+  900: "#26215C",
+};
+
 export default function RecordingsPage() {
   const router = useRouter();
 
@@ -73,7 +83,7 @@ export default function RecordingsPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#fafafa",
+        background: "#f5f4fb",
         fontFamily: font,
       }}
     >
@@ -100,10 +110,10 @@ export default function RecordingsPage() {
           <div>
             <h1
               style={{
-                fontSize: "24px",
+                fontSize: "22px",
                 fontWeight: "700",
                 color: "#111111",
-                letterSpacing: "-0.03em",
+                letterSpacing: "-0.025em",
                 margin: "0 0 6px",
                 fontFamily: font,
               }}
@@ -113,7 +123,7 @@ export default function RecordingsPage() {
             <p
               style={{
                 fontSize: "14px",
-                color: "#999999",
+                color: "#888888",
                 margin: 0,
                 fontFamily: font,
               }}
@@ -158,7 +168,7 @@ export default function RecordingsPage() {
                 isLast={idx === filtered.length - 1}
                 onOpen={() => {
                   if (recording.meetingId) {
-                    router.push(`/meetings/${recording.meetingId}`);
+                    router.push(`/dashboard/meetings/${recording.meetingId}`);
                   }
                 }}
                 onRetry={() => retryRecording.mutate(recording.recordingId)}
@@ -191,7 +201,7 @@ export default function RecordingsPage() {
   );
 }
 
-// ── Skeleton ───────────────────────────────────────────────────────────────
+// ── Skeleton ────────────────────────────────────────────────────────────────
 
 function SkeletonList() {
   return (
@@ -202,7 +212,7 @@ function SkeletonList() {
           style={{
             padding: "16px 20px",
             background: "#ffffff",
-            border: "1px solid #e8e8e8",
+            border: `1px solid ${purple[100]}`,
             borderRadius:
               idx === 0
                 ? "14px 14px 0 0"
@@ -219,7 +229,7 @@ function SkeletonList() {
               width: 8,
               height: 8,
               borderRadius: "50%",
-              background: "#f0f0f0",
+              background: purple[100],
               flexShrink: 0,
             }}
           />
@@ -229,7 +239,7 @@ function SkeletonList() {
                 width: `${120 + i * 40}px`,
                 height: "13px",
                 borderRadius: "6px",
-                background: "#f0f0f0",
+                background: purple[50],
                 marginBottom: "8px",
               }}
             />
@@ -238,7 +248,7 @@ function SkeletonList() {
                 width: `${160 + i * 20}px`,
                 height: "11px",
                 borderRadius: "6px",
-                background: "#f5f5f5",
+                background: purple[50],
               }}
             />
           </div>
@@ -247,7 +257,7 @@ function SkeletonList() {
               width: "72px",
               height: "22px",
               borderRadius: "20px",
-              background: "#f0f0f0",
+              background: purple[50],
               flexShrink: 0,
             }}
           />
@@ -266,8 +276,6 @@ function EmptyState({
   hasSearch: boolean;
   onStartRecording: () => void;
 }) {
-  const font = "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif";
-
   return (
     <div
       style={{
@@ -275,7 +283,7 @@ function EmptyState({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "64px 0",
+        padding: "72px 0",
         textAlign: "center",
       }}
     >
@@ -284,7 +292,8 @@ function EmptyState({
           width: "48px",
           height: "48px",
           borderRadius: "14px",
-          background: "#f5f5f5",
+          background: purple[50],
+          border: `1px solid ${purple[100]}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -292,12 +301,12 @@ function EmptyState({
         }}
       >
         {hasSearch ? (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         ) : (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
             <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
             <line x1="12" y1="19" x2="12" y2="22" />
@@ -307,7 +316,7 @@ function EmptyState({
       <p style={{ fontSize: "15px", fontWeight: "600", color: "#333", fontFamily: font, margin: "0 0 6px" }}>
         {hasSearch ? "No recordings found" : "No recordings yet"}
       </p>
-      <p style={{ fontSize: "13px", color: "#bbb", fontFamily: font, margin: "0 0 24px" }}>
+      <p style={{ fontSize: "13px", color: purple[400], fontFamily: font, margin: "0 0 24px" }}>
         {hasSearch
           ? "Try a different search or clear filters."
           : "Start a recording to capture your next meeting."}
@@ -328,10 +337,15 @@ function EmptyState({
             border: "none",
             background: "#111111",
             color: "#ffffff",
-            transition: "opacity 0.15s",
+            transition: "all 0.15s",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = "0.85";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = "1";
+          }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />

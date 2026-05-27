@@ -2,19 +2,23 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useSession } from "@/hooks/auth/useSession";
+
+const purple = {
+  400: "#7F77DD",
+};
 
 export function GreetingHeader() {
-  const router = useRouter();
+  const { data: session } = useSession();
 
-  const { greeting, sub } = useMemo(() => {
+  const { greeting } = useMemo(() => {
     const hour = new Date().getHours();
     const g = hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
-    return {
-      greeting: g,
-      sub: "Ideas & conversations stay local, private, and in your control.",
-    };
+    return { greeting: g };
   }, []);
+
+  // Pull first name only — "John Doe" → "John"
+  const firstName = session?.user?.name?.split(" ")[0] ?? "there";
 
   return (
     <div style={{
@@ -32,16 +36,16 @@ export function GreetingHeader() {
           margin: "0 0 5px",
           fontFamily: "-apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif",
         }}>
-          {greeting}, Moe.
+          {greeting}, {firstName}.
         </h1>
         <p style={{
           fontSize: "13px",
-          color: "#888888",
+          color: purple[400],
           margin: 0,
           fontFamily: "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif",
           letterSpacing: "-0.01em",
         }}>
-          {sub}
+          Ideas & conversations stay local, private, and in your control.
         </p>
       </div>
     </div>

@@ -6,29 +6,44 @@ import type { RecordingListItem, RecordingStatus } from "@repo/types";
 
 const font = "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif";
 
+const purple = {
+  50:  "#EEEDFE",
+  100: "#CECBF6",
+  200: "#AFA9EC",
+  400: "#7F77DD",
+  600: "#534AB7",
+  800: "#3C3489",
+  900: "#26215C",
+};
+
 const STATUS_CONFIG: Record<
   RecordingStatus,
   { label: string; color: string; bg: string; dot: string }
 > = {
   recorded: {
     label: "Recorded",
-    color: "#6366f1",
-    bg: "#eef2ff",
-    dot: "#6366f1",
+    color: purple[800],
+    bg: purple[50],
+    dot: purple[600],
   },
   processing: {
     label: "Processing…",
-    color: "#0ea5e9",
+    color: "#0369a1",
     bg: "#e0f2fe",
     dot: "#0ea5e9",
   },
   completed: {
     label: "Completed",
-    color: "#16a34a",
+    color: "#15803d",
     bg: "#dcfce7",
     dot: "#16a34a",
   },
-  failed: { label: "Failed", color: "#dc2626", bg: "#fee2e2", dot: "#dc2626" },
+  failed: {
+    label: "Failed",
+    color: "#dc2626",
+    bg: "#fee2e2",
+    dot: "#dc2626",
+  },
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -39,24 +54,12 @@ const SOURCE_LABELS: Record<string, string> = {
 function formatDate(iso: string): string {
   const date = new Date(iso);
   const now = new Date();
-  const diffDays = Math.floor(
-    (now.getTime() - date.getTime()) / 86400000
-  );
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
   if (diffDays === 0)
-    return `Today · ${date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    })}`;
+    return `Today · ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
   if (diffDays === 1)
-    return `Yesterday · ${date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    })}`;
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+    return `Yesterday · ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function formatDuration(seconds: number | null): string {
@@ -69,8 +72,7 @@ function formatDuration(seconds: number | null): string {
 
 function formatBytes(bytes: number | null): string {
   if (bytes === null) return "";
-  if (bytes < 1024 * 1024)
-    return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -96,20 +98,17 @@ export function RecordingCard({
   isDeleting,
 }: RecordingCardProps) {
   const cfg = STATUS_CONFIG[recording.status];
-  const isPending =
-    recording.status === "recorded" || recording.status === "processing";
+  const isPending = recording.status === "recorded" || recording.status === "processing";
   const isFailed = recording.status === "failed";
   const isCompleted = recording.status === "completed";
 
   const displayName =
     recording.originalFileName ?? SOURCE_LABELS[recording.source] ?? "Recording";
 
-  const borderRadius = isFirst && isLast
-    ? "14px"
-    : isFirst
-    ? "14px 14px 0 0"
-    : isLast
-    ? "0 0 14px 14px"
+  const borderRadius =
+    isFirst && isLast ? "14px"
+    : isFirst ? "14px 14px 0 0"
+    : isLast ? "0 0 14px 14px"
     : "0";
 
   return (
@@ -120,13 +119,22 @@ export function RecordingCard({
         gap: "16px",
         padding: "16px 20px",
         background: "#ffffff",
-        borderLeft: "1px solid #e8e8e8",
-        borderRight: "1px solid #e8e8e8",
-        borderTop: "1px solid #e8e8e8",
-        borderBottom: isLast ? "1px solid #e8e8e8" : "none",
+        borderLeft: `1px solid ${purple[100]}`,
+        borderRight: `1px solid ${purple[100]}`,
+        borderTop: `1px solid ${purple[100]}`,
+        borderBottom: isLast ? `1px solid ${purple[100]}` : "none",
         borderRadius,
         boxSizing: "border-box",
         fontFamily: font,
+        transition: "background 0.12s",
+        cursor: isCompleted ? "pointer" : "default",
+      }}
+      onClick={isCompleted ? onOpen : undefined}
+      onMouseEnter={(e) => {
+        if (isCompleted) e.currentTarget.style.background = purple[50];
+      }}
+      onMouseLeave={(e) => {
+        if (isCompleted) e.currentTarget.style.background = "#ffffff";
       }}
     >
       {/* Status indicator */}
@@ -181,7 +189,7 @@ export function RecordingCard({
           <span
             style={{
               fontSize: "12px",
-              color: "#bbb",
+              color: purple[400],
               fontFamily: font,
               flexShrink: 0,
             }}
@@ -191,19 +199,13 @@ export function RecordingCard({
         </div>
 
         {/* Meta row */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           {recording.durationSeconds !== null && (
             <MetaChip
               icon={
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
                 </svg>
               }
               label={formatDuration(recording.durationSeconds)}
@@ -213,8 +215,8 @@ export function RecordingCard({
             <MetaChip
               icon={
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
                 </svg>
               }
               label={formatBytes(recording.fileSizeBytes)}
@@ -224,15 +226,15 @@ export function RecordingCard({
             icon={
               recording.source === "recording" ? (
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="22"/>
+                  <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
                 </svg>
               ) : (
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="17 8 12 3 7 8"/>
-                  <line x1="12" y1="3" x2="12" y2="15"/>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
               )
             }
@@ -246,6 +248,7 @@ export function RecordingCard({
         style={{
           display: "inline-flex",
           alignItems: "center",
+          gap: "5px",
           fontSize: "11px",
           fontWeight: "600",
           color: cfg.color,
@@ -256,39 +259,15 @@ export function RecordingCard({
           flexShrink: 0,
         }}
       >
+        {isPending && <SpinnerSVG size={10} color={cfg.dot} />}
         {cfg.label}
       </span>
 
       {/* Action buttons */}
       <div
-        style={{
-          display: "flex",
-          gap: "6px",
-          flexShrink: 0,
-        }}
+        style={{ display: "flex", gap: "6px", flexShrink: 0 }}
         onClick={(e) => e.stopPropagation()}
       >
-        {isCompleted && (
-          <ActionButton
-            onClick={onOpen}
-            title="Open meeting"
-            color="#111111"
-            bgColor="#f5f5f5"
-          >
-            Open
-          </ActionButton>
-        )}
-        {isFailed && (
-          <ActionButton
-            onClick={onRetry}
-            title="Retry processing"
-            color="#0ea5e9"
-            bgColor="#e0f2fe"
-            disabled={isRetrying}
-          >
-            {isRetrying ? "…" : "Retry"}
-          </ActionButton>
-        )}
         <ActionButton
           onClick={onDelete}
           title="Delete recording"
@@ -299,17 +278,22 @@ export function RecordingCard({
           {isDeleting ? "…" : "Delete"}
         </ActionButton>
       </div>
+
+      {/* Chevron for completed */}
+      {isCompleted && (
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke={purple[200]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ flexShrink: 0 }}
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      )}
     </div>
   );
 }
 
-function MetaChip({
-  icon,
-  label,
-}: {
-  icon: React.ReactNode;
-  label: string;
-}) {
+function MetaChip({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <span
       style={{
@@ -353,8 +337,7 @@ function ActionButton({
         cursor: disabled ? "not-allowed" : "pointer",
         fontSize: "12px",
         fontWeight: "600",
-        fontFamily:
-          "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif",
+        fontFamily: "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif",
         border: "none",
         background: bgColor,
         color: color,
@@ -373,19 +356,10 @@ function ActionButton({
   );
 }
 
-function SpinnerSVG({
-  size = 12,
-  color = "#999",
-}: {
-  size?: number;
-  color?: string;
-}) {
+function SpinnerSVG({ size = 12, color = "#999" }: { size?: number; color?: string }) {
   return (
     <svg
-      style={{
-        animation: "spin 0.75s linear infinite",
-        display: "block",
-      }}
+      style={{ animation: "spin 0.75s linear infinite", display: "block" }}
       width={size}
       height={size}
       viewBox="0 0 24 24"

@@ -25,7 +25,7 @@ export default function DashboardPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#fafafa",
+      background: "#f5f4fb",          // purple-tinted bg
       display: "flex",
       flexDirection: "column",
       fontFamily: "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif",
@@ -36,7 +36,6 @@ export default function DashboardPage() {
       <div style={{
         flex: 1,
         overflowY: "auto",
-        // Extra bottom padding when bar is visible so content isn't hidden under it
         padding: showRecordingBar
           ? "40px 58px 160px 48px"
           : "40px 58px 32px 48px",

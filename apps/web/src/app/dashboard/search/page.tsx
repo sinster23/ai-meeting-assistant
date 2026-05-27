@@ -10,7 +10,6 @@ import {
   SearchError,
 } from "@/components/search/SearchResults";
 
-/* ── Global keyframes injected once ── */
 const glowKeyframes = `
   @keyframes borderGlow {
     0%   { background-position: 0% 50%; }
@@ -20,6 +19,16 @@ const glowKeyframes = `
 `;
 
 const font = "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif";
+
+const purple = {
+  50:  "#EEEDFE",
+  100: "#CECBF6",
+  200: "#AFA9EC",
+  400: "#7F77DD",
+  600: "#534AB7",
+  800: "#3C3489",
+  900: "#26215C",
+};
 
 export default function SearchPage() {
   const search = useSearch();
@@ -41,7 +50,7 @@ export default function SearchPage() {
 
       <div style={{
         minHeight: "100vh",
-        background: "#fafafa",
+        background: "#f5f4fb",
         fontFamily: font,
         display: "flex",
         justifyContent: "center",
@@ -88,12 +97,12 @@ export default function SearchPage() {
                 <div style={{
                   fontSize: "10px",
                   fontWeight: "700",
-                  color: "#555555",       /* original text color */
-                  background: "#f0f0f0",  /* original bg color */
+                  color: "#555555",
+                  background: "#f0f0f0",
                   padding: "2px 9px",
                   borderRadius: "20px",
                   letterSpacing: "0.04em",
-                  textTransform: "uppercase",
+                  textTransform: "uppercase" as const,
                 }}>
                   AI-powered
                 </div>
@@ -120,7 +129,7 @@ export default function SearchPage() {
             <div style={{
               width: "100%",
               height: "1px",
-              background: "#f0f0f0",
+              background: purple[50],
               marginBottom: "24px",
             }} />
           )}
@@ -163,7 +172,8 @@ function EmptyState() {
         width: "52px",
         height: "52px",
         borderRadius: "16px",
-        background: "#f5f5f5",
+        background: purple[50],
+        border: `1px solid ${purple[100]}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -171,7 +181,8 @@ function EmptyState() {
       }}>
         <svg
           width="22" height="22" viewBox="0 0 24 24"
-          fill="none" stroke="#bbbbbb" strokeWidth="1.7"
+          fill="none" stroke={purple[400]}
+          strokeWidth="1.7"
           strokeLinecap="round" strokeLinejoin="round"
         >
           <circle cx="11" cy="11" r="8" />
@@ -190,7 +201,7 @@ function EmptyState() {
       </p>
       <p style={{
         fontSize: "13px",
-        color: "#bbbbbb",
+        color: purple[200],
         fontFamily: font,
         margin: 0,
         maxWidth: "320px",

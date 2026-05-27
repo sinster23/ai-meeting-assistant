@@ -6,14 +6,24 @@ import type { RecordingStatus } from "@repo/types";
 
 const font = "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif";
 
+const purple = {
+  50:  "#EEEDFE",
+  100: "#CECBF6",
+  200: "#AFA9EC",
+  400: "#7F77DD",
+  600: "#534AB7",
+  800: "#3C3489",
+  900: "#26215C",
+};
+
 export type FilterStatus = "all" | RecordingStatus;
 export type SortOption = "newest" | "oldest";
 
 const STATUS_LABELS: Record<RecordingStatus, string> = {
-  recorded: "Recorded",
+  recorded:   "Recorded",
   processing: "Processing",
-  completed: "Completed",
-  failed: "Failed",
+  completed:  "Completed",
+  failed:     "Failed",
 };
 
 interface RecordingFiltersProps {
@@ -52,7 +62,7 @@ export function RecordingFilters({
             height="14"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#bbb"
+            stroke={purple[400]}
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -79,14 +89,14 @@ export function RecordingFilters({
               fontFamily: font,
               color: "#111",
               background: "#ffffff",
-              border: "1px solid #e8e8e8",
+              border: `1px solid ${purple[100]}`,
               borderRadius: "10px",
               outline: "none",
-              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+              boxShadow: `0 1px 3px rgba(83,74,183,0.06)`,
               transition: "border-color 0.15s",
             }}
-            onFocus={(e) => (e.target.style.borderColor = "#c0c0c0")}
-            onBlur={(e) => (e.target.style.borderColor = "#e8e8e8")}
+            onFocus={(e) => (e.target.style.borderColor = purple[200])}
+            onBlur={(e) => (e.target.style.borderColor = purple[100])}
           />
         </div>
 
@@ -97,13 +107,13 @@ export function RecordingFilters({
             padding: "9px 12px",
             fontSize: "13px",
             fontFamily: font,
-            color: "#555",
+            color: purple[800],
             background: "#ffffff",
-            border: "1px solid #e8e8e8",
+            border: `1px solid ${purple[100]}`,
             borderRadius: "10px",
             outline: "none",
             cursor: "pointer",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+            boxShadow: `0 1px 3px rgba(83,74,183,0.06)`,
           }}
         >
           <option value="newest">Newest</option>
@@ -121,13 +131,7 @@ export function RecordingFilters({
         }}
       >
         {(
-          [
-            "all",
-            "recorded",
-            "processing",
-            "completed",
-            "failed",
-          ] as const
+          ["all", "recorded", "processing", "completed", "failed"] as const
         ).map((f) => {
           const isActive = filterStatus === f;
           const count = counts[f] ?? 0;
@@ -146,17 +150,30 @@ export function RecordingFilters({
                 fontWeight: isActive ? "600" : "500",
                 fontFamily: font,
                 border: "1px solid",
-                borderColor: isActive ? "#111111" : "#e8e8e8",
+                borderColor: isActive ? "#111111" : purple[100],
                 background: isActive ? "#111111" : "#ffffff",
-                color: isActive ? "#ffffff" : "#666666",
+                color: isActive ? "#ffffff" : purple[600],
                 transition: "all 0.15s",
+                boxShadow: isActive ? "0 1px 3px rgba(0,0,0,0.18)" : "none",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = purple[50];
+                  e.currentTarget.style.borderColor = purple[200];
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = "#ffffff";
+                  e.currentTarget.style.borderColor = purple[100];
+                }
               }}
             >
               {f === "all" ? "All" : STATUS_LABELS[f as RecordingStatus]}
               <span
                 style={{
                   fontSize: "11px",
-                  color: isActive ? "rgba(255,255,255,0.65)" : "#bbb",
+                  color: isActive ? "rgba(255,255,255,0.65)" : purple[400],
                 }}
               >
                 {count}

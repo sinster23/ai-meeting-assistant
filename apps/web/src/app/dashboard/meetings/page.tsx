@@ -12,11 +12,21 @@ const font = "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif";
 type FilterStatus = "all" | MeetingStatus;
 type SortOption = "newest" | "oldest";
 
+const purple = {
+  50:  "#EEEDFE",
+  100: "#CECBF6",
+  200: "#AFA9EC",
+  400: "#7F77DD",
+  600: "#534AB7",
+  800: "#3C3489",
+  900: "#26215C",
+};
+
 const STATUS_CONFIG: Record<MeetingStatus, { label: string; color: string; bg: string; dot: string }> = {
-  uploaded:   { label: "Uploaded",    color: "#6366f1", bg: "#eef2ff", dot: "#6366f1" },
-  processing: { label: "Processing…", color: "#0ea5e9", bg: "#e0f2fe", dot: "#0ea5e9" },
-  completed:  { label: "Completed",   color: "#16a34a", bg: "#dcfce7", dot: "#16a34a" },
-  failed:     { label: "Failed",      color: "#dc2626", bg: "#fee2e2", dot: "#dc2626" },
+  uploaded:   { label: "Preparing…",  color: purple[800], bg: purple[50],  dot: purple[600] },
+  processing: { label: "Processing…", color: "#0369a1",   bg: "#e0f2fe",   dot: "#0ea5e9"   },
+  completed:  { label: "Completed",   color: "#15803d",   bg: "#dcfce7",   dot: "#16a34a"   },
+  failed:     { label: "Failed",      color: "#dc2626",   bg: "#fee2e2",   dot: "#dc2626"   },
 };
 
 function formatDate(iso: string): string {
@@ -33,7 +43,6 @@ function truncate(str: string | null, max: number): string {
   return str.length > max ? str.slice(0, max).trimEnd() + "…" : str;
 }
 
-// Strip markdown for preview
 function stripMarkdown(text: string): string {
   return text
     .replace(/\*\*([^*]+)\*\*/g, "$1")
@@ -89,23 +98,24 @@ export default function MeetingsPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#fafafa",
+      background: "#f5f4fb",
       fontFamily: font,
     }}>
-<div style={{
-  padding: "40px 58px 80px",
-  boxSizing: "border-box",
-  width: "100%",
-}}>
+      <div style={{
+        padding: "40px 58px 80px",
+        boxSizing: "border-box",
+        width: "100%",
+      }}>
+
         {/* ── Header ── */}
         <div style={{ marginBottom: "32px" }}>
           <h1 style={{
-            fontSize: "24px", fontWeight: "700", color: "#111111",
-            letterSpacing: "-0.03em", margin: "0 0 6px", fontFamily: font,
+            fontSize: "22px", fontWeight: "700", color: "#111111",
+            letterSpacing: "-0.025em", margin: "0 0 6px", fontFamily: font,
           }}>
             Meetings
           </h1>
-          <p style={{ fontSize: "14px", color: "#999999", margin: 0, fontFamily: font }}>
+          <p style={{ fontSize: "14px", color: "#888888", margin: 0, fontFamily: font }}>
             Manage and revisit your recorded conversations.
           </p>
         </div>
@@ -119,7 +129,7 @@ export default function MeetingsPage() {
           <div style={{ flex: 1, position: "relative" }}>
             <svg
               width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              stroke={purple[400]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
               style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }}
             >
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -133,13 +143,13 @@ export default function MeetingsPage() {
                 width: "100%", boxSizing: "border-box",
                 padding: "9px 12px 9px 34px",
                 fontSize: "13px", fontFamily: font, color: "#111",
-                background: "#ffffff", border: "1px solid #e8e8e8",
+                background: "#ffffff", border: `1px solid ${purple[100]}`,
                 borderRadius: "10px", outline: "none",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                boxShadow: `0 1px 3px rgba(83,74,183,0.06)`,
                 transition: "border-color 0.15s",
               }}
-              onFocus={e => (e.target.style.borderColor = "#c0c0c0")}
-              onBlur={e => (e.target.style.borderColor = "#e8e8e8")}
+              onFocus={e => (e.target.style.borderColor = purple[200])}
+              onBlur={e => (e.target.style.borderColor = purple[100])}
             />
           </div>
 
@@ -149,9 +159,9 @@ export default function MeetingsPage() {
             onChange={(e) => setSort(e.target.value as SortOption)}
             style={{
               padding: "9px 12px", fontSize: "13px", fontFamily: font,
-              color: "#555", background: "#ffffff", border: "1px solid #e8e8e8",
+              color: purple[800], background: "#ffffff", border: `1px solid ${purple[100]}`,
               borderRadius: "10px", outline: "none", cursor: "pointer",
-              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+              boxShadow: `0 1px 3px rgba(83,74,183,0.06)`,
             }}
           >
             <option value="newest">Newest</option>
@@ -166,7 +176,6 @@ export default function MeetingsPage() {
         }}>
           {(["all", "completed", "processing", "uploaded", "failed"] as const).map((f) => {
             const isActive = filterStatus === f;
-            const count = counts[f] ?? 0;
             return (
               <button
                 key={f}
@@ -176,18 +185,31 @@ export default function MeetingsPage() {
                   padding: "5px 12px", borderRadius: "20px", cursor: "pointer",
                   fontSize: "12px", fontWeight: isActive ? "600" : "500",
                   fontFamily: font, border: "1px solid",
-                  borderColor: isActive ? "#111111" : "#e8e8e8",
-                  background: isActive ? "#111111" : "#ffffff",
-                  color: isActive ? "#ffffff" : "#666666",
+                  borderColor: isActive ? purple[600] : purple[100],
+                  background: isActive ? purple[600] : "#ffffff",
+                  color: isActive ? "#ffffff" : purple[600],
                   transition: "all 0.15s",
+                  boxShadow: isActive ? `0 1px 3px rgba(83,74,183,0.20)` : "none",
+                }}
+                onMouseEnter={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = purple[50];
+                    e.currentTarget.style.borderColor = purple[200];
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = "#ffffff";
+                    e.currentTarget.style.borderColor = purple[100];
+                  }
                 }}
               >
                 {f === "all" ? "All" : STATUS_CONFIG[f as MeetingStatus].label.replace("…", "")}
                 <span style={{
                   fontSize: "11px",
-                  color: isActive ? "rgba(255,255,255,0.65)" : "#bbb",
+                  color: isActive ? "rgba(255,255,255,0.65)" : purple[400],
                 }}>
-                  {count}
+                  {counts[f] ?? 0}
                 </span>
               </button>
             );
@@ -240,10 +262,10 @@ function MeetingRow({
         display: "flex", alignItems: "center", gap: "16px",
         padding: "16px 20px",
         background: "#ffffff",
-        borderLeft: "1px solid #e8e8e8",
-        borderRight: "1px solid #e8e8e8",
-        borderTop: "1px solid #e8e8e8",
-        borderBottom: isLast ? "1px solid #e8e8e8" : "none",
+        borderLeft: `1px solid ${purple[100]}`,
+        borderRight: `1px solid ${purple[100]}`,
+        borderTop: `1px solid ${purple[100]}`,
+        borderBottom: isLast ? `1px solid ${purple[100]}` : "none",
         borderRadius: isFirst && isLast ? "14px"
           : isFirst ? "14px 14px 0 0"
           : isLast ? "0 0 14px 14px"
@@ -252,13 +274,13 @@ function MeetingRow({
         transition: "background 0.12s",
         boxSizing: "border-box",
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = "#fafafa")}
+      onMouseEnter={e => (e.currentTarget.style.background = purple[50])}
       onMouseLeave={e => (e.currentTarget.style.background = "#ffffff")}
     >
       {/* Status dot / spinner */}
       <div style={{ flexShrink: 0, width: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
         {isPending
-          ? <SpinnerSVG size={12} color={cfg.dot} />
+          ? <SpinnerSVG size={12} />
           : <span style={{ width: 8, height: 8, borderRadius: "50%", background: cfg.dot, display: "inline-block" }} />
         }
       </div>
@@ -273,7 +295,7 @@ function MeetingRow({
           }}>
             {title}
           </span>
-          <span style={{ fontSize: "12px", color: "#bbb", fontFamily: font, flexShrink: 0 }}>
+          <span style={{ fontSize: "12px", color: purple[400], fontFamily: font, flexShrink: 0 }}>
             {formatDate(meeting.createdAt)}
           </span>
         </div>
@@ -287,7 +309,7 @@ function MeetingRow({
           </p>
         )}
         {isPending && !preview && (
-          <p style={{ fontSize: "13px", color: "#aaa", margin: 0, fontFamily: font }}>
+          <p style={{ fontSize: "13px", color: purple[400], margin: 0, fontFamily: font }}>
             Processing your meeting…
           </p>
         )}
@@ -300,12 +322,13 @@ function MeetingRow({
         background: cfg.bg, padding: "3px 10px", borderRadius: "20px",
         fontFamily: font, flexShrink: 0,
       }}>
+        {isPending && <SpinnerSVG size={10} />}
         {cfg.label}
       </span>
 
       {/* Chevron */}
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-        stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        stroke={purple[200]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
         style={{ flexShrink: 0 }}>
         <polyline points="9 18 15 12 9 6" />
       </svg>
@@ -322,18 +345,18 @@ function SkeletonList() {
         <div key={i} style={{
           padding: "16px 20px",
           background: "#ffffff",
-          border: "1px solid #e8e8e8",
+          border: `1px solid ${purple[100]}`,
           borderRadius: idx === 0 ? "14px 14px 0 0"
             : idx === arr.length - 1 ? "0 0 14px 14px"
             : "0",
           display: "flex", alignItems: "center", gap: "16px",
         }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f0f0f0", flexShrink: 0 }} />
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: purple[100], flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
-            <div style={{ width: `${140 + i * 30}px`, height: "13px", borderRadius: "6px", background: "#f0f0f0", marginBottom: "8px" }} />
-            <div style={{ width: `${200 + i * 20}px`, height: "11px", borderRadius: "6px", background: "#f5f5f5" }} />
+            <div style={{ width: `${140 + i * 30}px`, height: "13px", borderRadius: "6px", background: purple[50], marginBottom: "8px" }} />
+            <div style={{ width: `${200 + i * 20}px`, height: "11px", borderRadius: "6px", background: purple[50] }} />
           </div>
-          <div style={{ width: "72px", height: "22px", borderRadius: "20px", background: "#f0f0f0", flexShrink: 0 }} />
+          <div style={{ width: "72px", height: "22px", borderRadius: "20px", background: purple[50], flexShrink: 0 }} />
         </div>
       ))}
     </div>
@@ -350,18 +373,19 @@ function EmptyState({ hasSearch, onRecord }: { hasSearch: boolean; onRecord: () 
     }}>
       <div style={{
         width: "48px", height: "48px", borderRadius: "14px",
-        background: "#f5f5f5", display: "flex", alignItems: "center",
+        background: purple[50], border: `1px solid ${purple[100]}`,
+        display: "flex", alignItems: "center",
         justifyContent: "center", marginBottom: "16px",
       }}>
         {hasSearch
-          ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+          ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
         }
       </div>
       <p style={{ fontSize: "15px", fontWeight: "600", color: "#333", fontFamily: font, margin: "0 0 6px" }}>
         {hasSearch ? "No meetings found" : "No meetings yet"}
       </p>
-      <p style={{ fontSize: "13px", color: "#bbb", fontFamily: font, margin: "0 0 24px" }}>
+      <p style={{ fontSize: "13px", color: purple[400], fontFamily: font, margin: "0 0 24px" }}>
         {hasSearch ? "Try a different search term or clear filters." : "Record or import a conversation to get started."}
       </p>
       {!hasSearch && (
@@ -371,11 +395,18 @@ function EmptyState({ hasSearch, onRecord }: { hasSearch: boolean; onRecord: () 
             display: "flex", alignItems: "center", gap: "6px",
             padding: "9px 18px", borderRadius: "10px", cursor: "pointer",
             fontSize: "13px", fontWeight: "600", fontFamily: font,
-            border: "none", background: "#111111", color: "#ffffff",
-            transition: "opacity 0.15s",
+            border: "none", background: purple[600], color: "#ffffff",
+            transition: "all 0.15s",
+            boxShadow: `0 1px 3px rgba(83,74,183,0.25)`,
           }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
-          onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = purple[800];
+            e.currentTarget.style.boxShadow = `0 2px 6px rgba(83,74,183,0.35)`;
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = purple[600];
+            e.currentTarget.style.boxShadow = `0 1px 3px rgba(83,74,183,0.25)`;
+          }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z"/>
@@ -391,10 +422,13 @@ function EmptyState({ hasSearch, onRecord }: { hasSearch: boolean; onRecord: () 
 
 // ── Spinner ────────────────────────────────────────────────────────────────
 
-function SpinnerSVG({ size = 14, color = "#999" }: { size?: number; color?: string }) {
+function SpinnerSVG({ size = 14 }: { size?: number }) {
   return (
-    <svg style={{ animation: "spin 0.75s linear infinite", display: "block" }}
-      width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5">
+    <svg
+      style={{ animation: "spin 0.75s linear infinite", display: "block" }}
+      width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={purple[400]} strokeWidth="2.5"
+    >
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
     </svg>

@@ -1,9 +1,4 @@
 // apps/web/app/meetings/[meetingId]/page.tsx
-//
-// Layout: main content left + collapsible AI chat sidebar right
-// Sidebar is toggled via the "Chat" tab button and an X close button
-// No color/theme changes — same #fafafa / #111 / white aesthetic
-
 "use client";
 
 import { use, useState, useEffect, useRef, useCallback } from "react";
@@ -19,11 +14,21 @@ const font = "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif";
 
 type Tab = "transcribe" | "summary";
 
-// ── Sidebar width ──────────────────────────────────────────────────────────
 const SIDEBAR_W = 360;
 
+// ── Theme tokens ───────────────────────────────────────────────────────────
+const purple = {
+  50:  "#EEEDFE",
+  100: "#CECBF6",
+  200: "#AFA9EC",
+  400: "#7F77DD",
+  600: "#534AB7",
+  800: "#3C3489",
+  900: "#26215C",
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Markdown helpers (unchanged from original)
+// Markdown helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
 function renderMarkdown(text: string): React.ReactNode {
@@ -52,7 +57,7 @@ function renderMarkdown(text: string): React.ReactNode {
         <ul key={`ul-${i}`} style={{ margin: "6px 0 10px", padding: 0, listStyle: "none" }}>
           {items.map((item, idx) => (
             <li key={idx} style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "14px", color: "#444", lineHeight: 1.75, fontFamily: font, marginBottom: "2px" }}>
-              <span style={{ color: "#aaa", flexShrink: 0, marginTop: "1px" }}>•</span>
+              <span style={{ color: purple[400], flexShrink: 0, marginTop: "1px" }}>•</span>
               <span>{inlineMarkdown(item)}</span>
             </li>
           ))}
@@ -67,7 +72,7 @@ function renderMarkdown(text: string): React.ReactNode {
         <ol key={`ol-${i}`} style={{ margin: "6px 0 10px", padding: 0, listStyle: "none" }}>
           {items.map((item, idx) => (
             <li key={idx} style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "14px", color: "#444", lineHeight: 1.75, fontFamily: font, marginBottom: "2px" }}>
-              <span style={{ color: "#aaa", flexShrink: 0, minWidth: "16px", marginTop: "1px", fontSize: "13px" }}>{idx + 1}.</span>
+              <span style={{ color: purple[400], flexShrink: 0, minWidth: "16px", marginTop: "1px", fontSize: "13px" }}>{idx + 1}.</span>
               <span>{inlineMarkdown(item)}</span>
             </li>
           ))}
@@ -90,7 +95,7 @@ function inlineMarkdown(text: string): React.ReactNode {
     const raw = match[0];
     if (raw.startsWith("**")) parts.push(<strong key={match.index} style={{ fontWeight: "700", color: "#222" }}>{raw.slice(2, -2)}</strong>);
     else if (raw.startsWith("*")) parts.push(<em key={match.index} style={{ fontStyle: "italic" }}>{raw.slice(1, -1)}</em>);
-    else if (raw.startsWith("`")) parts.push(<code key={match.index} style={{ fontFamily: "monospace", fontSize: "12px", background: "#f5f5f5", padding: "1px 5px", borderRadius: "4px", color: "#555" }}>{raw.slice(1, -1)}</code>);
+    else if (raw.startsWith("`")) parts.push(<code key={match.index} style={{ fontFamily: "monospace", fontSize: "12px", background: purple[50], padding: "1px 5px", borderRadius: "4px", color: purple[800] }}>{raw.slice(1, -1)}</code>);
     last = match.index + raw.length;
   }
   if (last < text.length) parts.push(text.slice(last));
@@ -142,10 +147,9 @@ export default function MeetingPage({ params }: Props) {
   const durationMin = (data as any).durationSeconds ? Math.round((data as any).durationSeconds / 60) : null;
 
   return (
-    // Root: full viewport, flex row
-    <div style={{ display: "flex", minHeight: "100vh", background: "#fafafa", fontFamily: font, position: "relative" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#f5f4fb", fontFamily: font, position: "relative" }}>
 
-      {/* ── Main content area — shrinks when sidebar open ── */}
+      {/* ── Main content area ── */}
       <div style={{
         flex: 1,
         minWidth: 0,
@@ -154,7 +158,7 @@ export default function MeetingPage({ params }: Props) {
       }}>
         <div style={{ maxWidth: "780px", margin: "0 auto", padding: "36px 48px 80px", boxSizing: "border-box" }}>
 
-          {/* ── Header row: title + Share ── */}
+          {/* ── Header row ── */}
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
             <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#111111", letterSpacing: "-0.025em", margin: 0, fontFamily: font, lineHeight: 1.25, flex: 1, marginRight: "16px" }}>
               {meetingTitle}
@@ -164,12 +168,12 @@ export default function MeetingPage({ params }: Props) {
                 display: "flex", alignItems: "center", gap: "6px",
                 padding: "7px 14px", borderRadius: "8px", cursor: "pointer",
                 fontSize: "13px", fontWeight: "500", fontFamily: font,
-                border: "1px solid #e8e8e8", background: "#ffffff",
-                color: "#555555", boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                border: `1px solid ${purple[100]}`, background: "#ffffff",
+                color: purple[600], boxShadow: `0 1px 3px rgba(83,74,183,0.08)`,
                 transition: "all 0.15s", flexShrink: 0,
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#f5f5f5"; e.currentTarget.style.borderColor = "#d8d8d8"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e8e8e8"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = purple[50]; e.currentTarget.style.borderColor = purple[200]; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = purple[100]; }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -201,10 +205,10 @@ export default function MeetingPage({ params }: Props) {
                   display: "flex", alignItems: "center", gap: "5px",
                   padding: "3px 10px", borderRadius: "6px", cursor: "pointer",
                   fontSize: "12px", fontWeight: "500", fontFamily: font,
-                  border: "1px solid #e8e8e8", background: "#fff",
-                  color: copied ? "#16a34a" : "#555", transition: "all 0.15s",
+                  border: `1px solid ${purple[100]}`, background: "#fff",
+                  color: copied ? "#16a34a" : purple[600], transition: "all 0.15s",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#f5f5f5"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = purple[50]; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "#fff"; }}
               >
                 {copied ? <><CheckIcon /> Copied!</> : <>
@@ -217,10 +221,10 @@ export default function MeetingPage({ params }: Props) {
             )}
           </div>
 
-          {/* ── Tabs: Transcribe | Summary | Chat (toggle) ── */}
+          {/* ── Tabs ── */}
           <div style={{
             display: "inline-flex", alignItems: "center",
-            background: "#f3f3f3", borderRadius: "10px",
+            background: "#edeaf8", borderRadius: "10px",
             padding: "3px", marginBottom: "28px", gap: "2px",
           }}>
             {(["transcribe", "summary"] as Tab[]).map((tab) => (
@@ -234,9 +238,9 @@ export default function MeetingPage({ params }: Props) {
                   border: "none", borderRadius: "8px", cursor: "pointer",
                   fontSize: "13px",
                   fontWeight: activeTab === tab ? "600" : "500",
-                  color: activeTab === tab ? "#111111" : "#888888",
+                  color: activeTab === tab ? purple[800] : "#888888",
                   fontFamily: font,
-                  boxShadow: activeTab === tab ? "0 1px 3px rgba(0,0,0,0.10)" : "none",
+                  boxShadow: activeTab === tab ? `0 1px 3px rgba(83,74,183,0.12)` : "none",
                   transition: "all 0.15s", whiteSpace: "nowrap",
                 }}
               >
@@ -343,171 +347,173 @@ function ChatSidebar({
   }
 
   return (
-    <>
-      {/* Sidebar panel */}
+    <div style={{
+      position: "fixed",
+      top: 0,
+      right: 0,
+      width: `${SIDEBAR_W}px`,
+      height: "100vh",
+      background: "#ffffff",
+      borderLeft: `1px solid ${purple[100]}`,
+      boxShadow: open ? `-4px 0 24px rgba(83,74,183,0.08)` : "none",
+      display: "flex",
+      flexDirection: "column",
+      zIndex: 40,
+      transform: open ? "translateX(0)" : `translateX(${SIDEBAR_W}px)`,
+      transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s",
+      pointerEvents: open ? "auto" : "none",
+    }}>
+
+      {/* ── Sidebar header ── */}
       <div style={{
-        position: "fixed",
-        top: 0,
-        right: 0,
-        width: `${SIDEBAR_W}px`,
-        height: "100vh",
-        background: "#ffffff",
-        borderLeft: "1px solid #efefef",
-        boxShadow: open ? "-4px 0 24px rgba(0,0,0,0.06)" : "none",
+        padding: "16px 16px 14px",
+        borderBottom: `1px solid ${purple[50]}`,
         display: "flex",
-        flexDirection: "column",
-        zIndex: 40,
-        transform: open ? "translateX(0)" : `translateX(${SIDEBAR_W}px)`,
-        transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s",
-        pointerEvents: open ? "auto" : "none",
+        alignItems: "center",
+        gap: "10px",
+        flexShrink: 0,
+        background: "#fff",
       }}>
-
-        {/* ── Sidebar header ── */}
+        {/* Purple/black split icon */}
         <div style={{
-          padding: "16px 16px 14px",
-          borderBottom: "1px solid #f5f5f5",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          flexShrink: 0,
+          width: "30px", height: "30px", borderRadius: "8px",
+          background: "linear-gradient(135deg, #111 50%, #534AB7 50%)",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
-          <div style={{
-            width: "30px", height: "30px", borderRadius: "8px",
-            background: "#111", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
-              <circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>
-            </svg>
-          </div>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: "13px", fontWeight: "600", color: "#111", fontFamily: font, margin: 0, letterSpacing: "-0.01em" }}>
-              AI Chat
-            </p>
-            <p style={{ fontSize: "11px", color: "#aaa", fontFamily: font, margin: 0 }}>
-              {isPending ? "Available after processing" : "Grounded in this meeting"}
-            </p>
-          </div>
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            style={{
-              width: "28px", height: "28px", borderRadius: "7px",
-              border: "1px solid #efefef", background: "#fafafa",
-              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0, transition: "background 0.15s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#f0f0f0"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#fafafa"; }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+            <circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>
+          </svg>
         </div>
-
-        {/* ── Messages ── */}
-        <div style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-        }}>
-          {messages.length === 0 ? (
-            <ChatEmptyState
-              isReady={isReady}
-              isPending={isPending}
-              isFailed={isFailed}
-              onSuggest={sendMessage}
-            />
-          ) : (
-            <>
-              {messages.map((msg) => (
-                <SidebarMessage key={msg.id} role={msg.role} content={msg.content} isStreaming={msg.isStreaming} />
-              ))}
-              <div ref={bottomRef} />
-            </>
-          )}
-        </div>
-
-        {/* ── Input ── */}
-        <div style={{
-          borderTop: "1px solid #f0f0f0",
-          padding: "12px",
-          background: "#fff",
-          flexShrink: 0,
-        }}>
-          <div style={{
-            display: "flex", alignItems: "flex-end", gap: "8px",
-            background: isReady ? "#f8f8f8" : "#fafafa",
-            border: "1px solid #e8e8e8",
-            borderRadius: "10px",
-            padding: "8px 8px 8px 12px",
-          }}>
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onInput={() => {
-                const el = textareaRef.current;
-                if (!el) return;
-                el.style.height = "auto";
-                el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
-              }}
-              placeholder={
-                isPending ? "Meeting is still being analyzed…" :
-                isFailed  ? "Processing failed" :
-                "Ask anything about this meeting…"
-              }
-              disabled={!isReady || isLoading}
-              rows={1}
-              style={{
-                flex: 1, border: "none", outline: "none",
-                background: "transparent",
-                fontSize: "13px", fontFamily: font,
-                color: isReady ? "#222" : "#bbb",
-                lineHeight: 1.6, resize: "none", padding: 0,
-                letterSpacing: "-0.005em",
-                cursor: !isReady ? "not-allowed" : "text",
-              }}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || !isReady || isLoading}
-              style={{
-                width: "30px", height: "30px", borderRadius: "7px", border: "none",
-                cursor: !input.trim() || !isReady || isLoading ? "not-allowed" : "pointer",
-                background: !input.trim() || !isReady || isLoading ? "#e8e8e8" : "#111",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0, transition: "background 0.15s",
-              }}
-              onMouseEnter={e => { if (input.trim() && isReady && !isLoading) e.currentTarget.style.background = "#333"; }}
-              onMouseLeave={e => { if (input.trim() && isReady && !isLoading) e.currentTarget.style.background = "#111"; }}
-            >
-              {isLoading ? (
-                <svg style={{ animation: "spin 0.75s linear infinite" }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5">
-                  <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                </svg>
-              ) : (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                  stroke={!input.trim() || !isReady ? "#aaa" : "#fff"}
-                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"/>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                </svg>
-              )}
-            </button>
-          </div>
-          <p style={{ fontSize: "11px", color: "#ccc", fontFamily: font, margin: "6px 0 0", textAlign: "center" }}>
-            Answers grounded in this meeting only
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: "13px", fontWeight: "600", color: "#111", fontFamily: font, margin: 0, letterSpacing: "-0.01em" }}>
+            AI Chat
+          </p>
+          <p style={{ fontSize: "11px", color: purple[400], fontFamily: font, margin: 0 }}>
+            {isPending ? "Available after processing" : "Grounded in this meeting"}
           </p>
         </div>
-
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          style={{
+            width: "28px", height: "28px", borderRadius: "7px",
+            border: `1px solid ${purple[100]}`, background: purple[50],
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0, transition: "background 0.15s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = purple[100]; }}
+          onMouseLeave={e => { e.currentTarget.style.background = purple[50]; }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={purple[600]} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
-    </>
+
+      {/* ── Messages ── */}
+      <div style={{
+        flex: 1,
+        overflowY: "auto",
+        padding: "16px",
+        display: "flex",
+        flexDirection: "column",
+        background: "#fdfcff",
+      }}>
+        {messages.length === 0 ? (
+          <ChatEmptyState
+            isReady={isReady}
+            isPending={isPending}
+            isFailed={isFailed}
+            onSuggest={sendMessage}
+          />
+        ) : (
+          <>
+            {messages.map((msg) => (
+              <SidebarMessage key={msg.id} role={msg.role} content={msg.content} isStreaming={msg.isStreaming} />
+            ))}
+            <div ref={bottomRef} />
+          </>
+        )}
+      </div>
+
+      {/* ── Input ── */}
+      <div style={{
+        borderTop: `1px solid ${purple[50]}`,
+        padding: "12px",
+        background: "#fff",
+        flexShrink: 0,
+      }}>
+        <div style={{
+          display: "flex", alignItems: "flex-end", gap: "8px",
+          background: isReady ? "#f8f7fe" : "#fafafa",
+          border: `1px solid ${isReady ? purple[100] : "#e8e8e8"}`,
+          borderRadius: "10px",
+          padding: "8px 8px 8px 12px",
+          transition: "border-color 0.15s",
+        }}>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onInput={() => {
+              const el = textareaRef.current;
+              if (!el) return;
+              el.style.height = "auto";
+              el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+            }}
+            placeholder={
+              isPending ? "Meeting is still being analyzed…" :
+              isFailed  ? "Processing failed" :
+              "Ask anything about this meeting…"
+            }
+            disabled={!isReady || isLoading}
+            rows={1}
+            style={{
+              flex: 1, border: "none", outline: "none",
+              background: "transparent",
+              fontSize: "13px", fontFamily: font,
+              color: isReady ? "#222" : "#bbb",
+              lineHeight: 1.6, resize: "none", padding: 0,
+              letterSpacing: "-0.005em",
+              cursor: !isReady ? "not-allowed" : "text",
+            }}
+          />
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || !isReady || isLoading}
+            style={{
+              width: "30px", height: "30px", borderRadius: "7px", border: "none",
+              cursor: !input.trim() || !isReady || isLoading ? "not-allowed" : "pointer",
+              background: !input.trim() || !isReady || isLoading ? "#e8e8e8" : "#111",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0, transition: "background 0.15s",
+            }}
+            onMouseEnter={e => { if (input.trim() && isReady && !isLoading) e.currentTarget.style.background = purple[600]; }}
+            onMouseLeave={e => { if (input.trim() && isReady && !isLoading) e.currentTarget.style.background = "#111"; }}
+          >
+            {isLoading ? (
+              <svg style={{ animation: "spin 0.75s linear infinite" }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5">
+                <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke={!input.trim() || !isReady ? "#aaa" : "#fff"}
+                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            )}
+          </button>
+        </div>
+        <p style={{ fontSize: "11px", color: purple[200], fontFamily: font, margin: "6px 0 0", textAlign: "center" }}>
+          Answers grounded in this meeting only
+        </p>
+      </div>
+
+    </div>
   );
 }
 
@@ -538,22 +544,22 @@ function SidebarMessage({ role, content, isStreaming }: { role: string; content:
 
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "14px" }}>
-      {/* AI dot */}
+      {/* AI avatar */}
       <div style={{
         width: "22px", height: "22px", borderRadius: "6px",
-        background: "#f0f0f0", border: "1px solid #e8e8e8",
+        background: purple[50], border: `1px solid ${purple[100]}`,
         display: "flex", alignItems: "center", justifyContent: "center",
         flexShrink: 0, marginTop: "2px",
       }}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={purple[600]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
           <circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>
         </svg>
       </div>
       <div style={{
         maxWidth: "84%",
-        background: "#f8f8f8",
-        border: "1px solid #efefef",
+        background: "#f8f7fe",
+        border: `1px solid ${purple[100]}`,
         borderRadius: "4px 14px 14px 14px",
         padding: "9px 13px",
         fontSize: "13px", lineHeight: 1.75, fontFamily: font,
@@ -563,7 +569,7 @@ function SidebarMessage({ role, content, isStreaming }: { role: string; content:
           <div style={{ display: "flex", gap: "4px", alignItems: "center", height: "18px" }}>
             {[0, 1, 2].map(i => (
               <span key={i} style={{
-                width: "5px", height: "5px", borderRadius: "50%", background: "#bbb",
+                width: "5px", height: "5px", borderRadius: "50%", background: purple[400],
                 display: "inline-block",
                 animation: "chatDot 1.2s ease-in-out infinite",
                 animationDelay: `${i * 0.2}s`,
@@ -593,7 +599,7 @@ function ChatEmptyState({ isReady, isPending, isFailed, onSuggest }: {
 
   if (isPending) return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "24px 0" }}>
-      <svg style={{ animation: "spin 0.75s linear infinite" }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2">
+      <svg style={{ animation: "spin 0.75s linear infinite" }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="2">
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
       </svg>
@@ -617,14 +623,14 @@ function ChatEmptyState({ isReady, isPending, isFailed, onSuggest }: {
             key={q}
             onClick={() => onSuggest(q)}
             style={{
-              background: "#fafafa", border: "1px solid #efefef",
+              background: purple[50], border: `1px solid ${purple[100]}`,
               borderRadius: "8px", padding: "9px 11px",
-              cursor: "pointer", fontSize: "12px", color: "#444",
+              cursor: "pointer", fontSize: "12px", color: purple[800],
               fontFamily: font, textAlign: "left",
               transition: "all 0.15s", letterSpacing: "-0.005em",
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#f5f5f5"; e.currentTarget.style.color = "#111"; e.currentTarget.style.borderColor = "#e0e0e0"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#fafafa"; e.currentTarget.style.color = "#444"; e.currentTarget.style.borderColor = "#efefef"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = purple[100]; e.currentTarget.style.color = purple[900]; e.currentTarget.style.borderColor = purple[200]; }}
+            onMouseLeave={e => { e.currentTarget.style.background = purple[50]; e.currentTarget.style.color = purple[800]; e.currentTarget.style.borderColor = purple[100]; }}
           >
             {q}
           </button>
@@ -635,7 +641,7 @@ function ChatEmptyState({ isReady, isPending, isFailed, onSuggest }: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Summary + Transcript tabs (unchanged content, same as before)
+// Summary + Transcript tabs
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SummaryTab({ data, isPending, isCompleted }: { data: any; isPending: boolean; isCompleted: boolean }) {
@@ -658,7 +664,7 @@ function SummaryTab({ data, isPending, isCompleted }: { data: any; isPending: bo
           <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
             {data.keyPoints.map((point: string, i: number) => (
               <li key={i} style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "14px", color: "#444", lineHeight: 1.75, fontFamily: font, marginBottom: "4px" }}>
-                <span style={{ color: "#aaa", flexShrink: 0 }}>•</span>
+                <span style={{ color: purple[400], flexShrink: 0 }}>•</span>
                 <span>{point}</span>
               </li>
             ))}
@@ -669,14 +675,14 @@ function SummaryTab({ data, isPending, isCompleted }: { data: any; isPending: bo
         <div style={{ marginBottom: "28px" }}>
           <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#222", fontFamily: font, margin: "0 0 10px" }}>Action Items</h3>
           {data.actionItems.map((item: ActionItem, i: number) => (
-            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "7px 0", borderBottom: "1px solid #f0f0f0" }}>
-              <div style={{ width: "15px", height: "15px", borderRadius: "4px", border: "1.5px solid #d0d0d0", background: "#fff", flexShrink: 0, marginTop: "2px", cursor: "pointer" }}/>
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "7px 0", borderBottom: `1px solid ${purple[50]}` }}>
+              <div style={{ width: "15px", height: "15px", borderRadius: "4px", border: `1.5px solid ${purple[200]}`, background: "#fff", flexShrink: 0, marginTop: "2px", cursor: "pointer" }}/>
               <div style={{ flex: 1 }}>
                 <span style={{ fontSize: "14px", fontWeight: "500", color: "#222", fontFamily: font, lineHeight: 1.6 }}>{item.task}</span>
                 {(item.owner || item.deadline) && (
                   <div style={{ display: "flex", gap: "12px", marginTop: "2px" }}>
-                    {item.owner && <span style={{ fontSize: "12px", color: "#aaa", fontFamily: font }}>👤 {item.owner}</span>}
-                    {item.deadline && <span style={{ fontSize: "12px", color: "#aaa", fontFamily: font }}>📅 {item.deadline}</span>}
+                    {item.owner && <span style={{ fontSize: "12px", color: purple[400], fontFamily: font }}>👤 {item.owner}</span>}
+                    {item.deadline && <span style={{ fontSize: "12px", color: purple[400], fontFamily: font }}>📅 {item.deadline}</span>}
                   </div>
                 )}
               </div>
@@ -711,7 +717,7 @@ function TranscribeTab({ transcript, isPending }: { transcript: string | null; i
 
 function PageShell({ children, chatOpen }: { children: React.ReactNode; chatOpen: boolean }) {
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#fafafa" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#f5f4fb" }}>
       <div style={{ flex: 1, minWidth: 0, transition: "padding-right 0.3s cubic-bezier(0.4,0,0.2,1)", paddingRight: chatOpen ? `${SIDEBAR_W + 16}px` : "0" }}>
         <div style={{ maxWidth: "780px", margin: "0 auto", padding: "36px 48px 80px", boxSizing: "border-box" }}>
           {children}
@@ -721,25 +727,25 @@ function PageShell({ children, chatOpen }: { children: React.ReactNode; chatOpen
   );
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  uploaded:   { label: "Preparing…",  color: "#6366f1", bg: "#eef2ff" },
-  processing: { label: "Processing…", color: "#0ea5e9", bg: "#e0f2fe" },
-  completed:  { label: "Completed",   color: "#16a34a", bg: "#dcfce7" },
-  failed:     { label: "Failed",      color: "#dc2626", bg: "#fee2e2" },
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
+  uploaded:   { label: "Preparing…",  color: purple[800], bg: purple[50],  dot: purple[600] },
+  processing: { label: "Processing…", color: "#0369a1",   bg: "#e0f2fe",   dot: "#0ea5e9"   },
+  completed:  { label: "Completed",   color: "#15803d",   bg: "#dcfce7",   dot: "#16a34a"   },
+  failed:     { label: "Failed",      color: "#dc2626",   bg: "#fee2e2",   dot: "#dc2626"   },
 };
 
 function StatusPill({ status, isPending }: { status: string; isPending: boolean }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.completed;
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "600", color: cfg.color, background: cfg.bg, padding: "3px 10px", borderRadius: "20px", fontFamily: font }}>
-      {isPending ? <SpinnerSVG size={10} /> : <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, display: "inline-block" }}/>}
+      {isPending ? <SpinnerSVG size={10} /> : <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, display: "inline-block" }}/>}
       {cfg.label}
     </span>
   );
 }
 
 function TabIcon({ tab, active }: { tab: Tab; active: boolean }) {
-  const stroke = active ? "#111" : "#aaa";
+  const stroke = active ? purple[800] : "#aaa";
   if (tab === "transcribe") return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z"/>
@@ -759,7 +765,7 @@ function TabIcon({ tab, active }: { tab: Tab; active: boolean }) {
 
 function SpinnerSVG({ size = 16 }: { size?: number }) {
   return (
-    <svg style={{ animation: "spin 0.75s linear infinite", display: "block" }} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5">
+    <svg style={{ animation: "spin 0.75s linear infinite", display: "block" }} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="2.5">
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
     </svg>

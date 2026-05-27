@@ -11,18 +11,30 @@ import { UploadModal } from "@/components/upload/UploadModal";
 
 const font = "-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif";
 
+// ── Purple palette — mirrors meetings page exactly ────────────────────────
+
+const purple = {
+  50:  "#EEEDFE",
+  100: "#CECBF6",
+  200: "#AFA9EC",
+  400: "#7F77DD",
+  600: "#534AB7",
+  800: "#3C3489",
+  900: "#26215C",
+};
+
 // ── Types ─────────────────────────────────────────────────────────────────
 
 type FilterStatus = "all" | "completed" | "processing" | "failed" | "uploaded";
 type SortOption   = "newest" | "oldest";
 
-// ── Status config — mirrors RecentMeetings.tsx exactly ────────────────────
+// ── Status config — purple-themed ─────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
-  uploaded:   { label: "Queued",     color: "#92400e", bg: "#fef3c7", dot: "#f59e0b" },
-  processing: { label: "Processing", color: "#374151", bg: "#f3f4f6", dot: "#6b7280" },
-  completed:  { label: "Completed",  color: "#065f46", bg: "#d1fae5", dot: "#10b981" },
-  failed:     { label: "Failed",     color: "#991b1b", bg: "#fee2e2", dot: "#ef4444" },
+  uploaded:   { label: "Queued",     color: purple[800], bg: purple[50],  dot: purple[600] },
+  processing: { label: "Processing", color: "#0369a1",   bg: "#e0f2fe",   dot: "#0ea5e9"   },
+  completed:  { label: "Completed",  color: "#15803d",   bg: "#dcfce7",   dot: "#16a34a"   },
+  failed:     { label: "Failed",     color: "#dc2626",   bg: "#fee2e2",   dot: "#dc2626"   },
 };
 
 // ── Format helpers ────────────────────────────────────────────────────────
@@ -52,10 +64,26 @@ function formatRelative(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// ── Spinner ───────────────────────────────────────────────────────────────
+
+function SpinnerSVG({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      style={{ animation: "spin 0.75s linear infinite", display: "block" }}
+      width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={purple[400]} strokeWidth="2.5"
+    >
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+  );
+}
+
 // ── Status pill ───────────────────────────────────────────────────────────
 
 function StatusPill({ status }: { status: string }) {
   const s = STATUS_CONFIG[status] ?? STATUS_CONFIG.uploaded;
+  const isPending = status === "processing" || status === "uploaded";
   return (
     <div style={{
       display: "flex",
@@ -70,19 +98,16 @@ function StatusPill({ status }: { status: string }) {
       flexShrink: 0,
       fontFamily: font,
     }}>
-      <div style={{
-        width: "5px",
-        height: "5px",
-        borderRadius: "50%",
-        background: s.dot,
-        boxShadow: status === "processing" ? `0 0 5px ${s.dot}` : "none",
-      }} />
+      {isPending
+        ? <SpinnerSVG size={10} />
+        : <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: s.dot }} />
+      }
       {s.label}
     </div>
   );
 }
 
-// ── Stats cards — mirrors StatsCards.tsx structure ────────────────────────
+// ── Stats cards ───────────────────────────────────────────────────────────
 
 function UploadStats({
   total,
@@ -99,7 +124,7 @@ function UploadStats({
       value: String(total),
       subLabel: total === 1 ? "1 file imported" : `${total} files imported`,
       icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="17 8 12 3 7 8"/>
           <line x1="12" y1="3" x2="12" y2="15"/>
@@ -111,7 +136,7 @@ function UploadStats({
       value: formatDuration(totalDuration),
       subLabel: "across all uploads",
       icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"/>
           <polyline points="12 6 12 12 16 14"/>
         </svg>
@@ -122,7 +147,7 @@ function UploadStats({
       value: formatSize(totalSize),
       subLabel: "of local storage",
       icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <ellipse cx="12" cy="5" rx="9" ry="3"/>
           <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
           <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
@@ -143,10 +168,10 @@ function UploadStats({
           key={stat.label}
           style={{
             background: "#ffffff",
-            border: "1px solid #e8e8e8",
+            border: `1px solid ${purple[100]}`,
             borderRadius: "14px",
             padding: "18px 20px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            boxShadow: `0 1px 3px rgba(83,74,183,0.06)`,
             fontFamily: font,
             display: "flex",
             alignItems: "flex-start",
@@ -157,7 +182,7 @@ function UploadStats({
             width: "34px",
             height: "34px",
             borderRadius: "50%",
-            background: "#f4f4f4",
+            background: purple[50],
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -166,13 +191,13 @@ function UploadStats({
             {stat.icon}
           </div>
           <div>
-            <div style={{ fontSize: "11px", fontWeight: "500", color: "#999999", letterSpacing: "0.01em", marginBottom: "2px" }}>
+            <div style={{ fontSize: "11px", fontWeight: "500", color: purple[400], letterSpacing: "0.01em", marginBottom: "2px" }}>
               {stat.label}
             </div>
             <div style={{ fontSize: "22px", fontWeight: "700", color: "#111111", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
               {stat.value}
             </div>
-            <div style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "2px" }}>
+            <div style={{ fontSize: "11px", color: purple[200], marginTop: "2px" }}>
               {stat.subLabel}
             </div>
           </div>
@@ -182,10 +207,11 @@ function UploadStats({
   );
 }
 
-// ── Upload row — mirrors RecentMeetings row structure ─────────────────────
+// ── Upload row ────────────────────────────────────────────────────────────
 
 function UploadRow({
   upload,
+  isFirst,
   isLast,
   onOpen,
   onRetry,
@@ -194,6 +220,7 @@ function UploadRow({
   isDeleting,
 }: {
   upload: any;
+  isFirst: boolean;
   isLast: boolean;
   onOpen: () => void;
   onRetry: () => void;
@@ -202,7 +229,6 @@ function UploadRow({
   isDeleting: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
-  const s = STATUS_CONFIG[upload.status] ?? STATUS_CONFIG.uploaded;
   const name = upload.originalFileName ?? "Untitled upload";
   const canOpen = !!upload.meetingId && upload.status !== "failed";
 
@@ -213,21 +239,32 @@ function UploadRow({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "14px",
-        padding: "13px 18px",
-        background: hovered ? "#fafafa" : "#ffffff",
-        borderBottom: isLast ? "none" : "1px solid #f0f0f0",
-        transition: "background 0.1s",
+        gap: "16px",
+        padding: "16px 20px",
+        background: hovered ? purple[50] : "#ffffff",
+        borderLeft: `1px solid ${purple[100]}`,
+        borderRight: `1px solid ${purple[100]}`,
+        borderTop: `1px solid ${purple[100]}`,
+        borderBottom: isLast ? `1px solid ${purple[100]}` : "none",
+        borderRadius: isFirst && isLast ? "14px"
+          : isFirst ? "14px 14px 0 0"
+          : isLast ? "0 0 14px 14px"
+          : "0",
+        transition: "background 0.12s",
+        boxSizing: "border-box",
       }}
     >
-      {/* Circle checkbox — matches RecentMeetings */}
-      <div style={{
-        width: "18px",
-        height: "18px",
-        borderRadius: "50%",
-        border: "1.5px solid #d0d0d0",
-        flexShrink: 0,
-      }} />
+      {/* Status dot / spinner */}
+      <div style={{ flexShrink: 0, width: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {upload.status === "processing" || upload.status === "uploaded"
+          ? <SpinnerSVG size={12} />
+          : <span style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: STATUS_CONFIG[upload.status]?.dot ?? purple[400],
+              display: "inline-block",
+            }} />
+        }
+      </div>
 
       {/* Name + meta */}
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -244,38 +281,45 @@ function UploadRow({
           }}
         >
           <div style={{
-            fontSize: "13.5px",
-            fontWeight: "500",
-            color: "#111111",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            letterSpacing: "-0.01em",
-            fontFamily: font,
+            display: "flex",
+            alignItems: "baseline",
+            gap: "10px",
+            marginBottom: upload.durationSeconds || upload.fileSizeBytes ? "3px" : 0,
           }}>
-            {name}
+            <span style={{
+              fontSize: "14px",
+              fontWeight: "600",
+              color: "#111111",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: "340px",
+              fontFamily: font,
+            }}>
+              {name}
+            </span>
+            <span style={{ fontSize: "12px", color: purple[400], fontFamily: font, flexShrink: 0 }}>
+              {formatRelative(upload.createdAt)}
+            </span>
           </div>
         </button>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
-          {upload.durationSeconds && (
-            <span style={{ fontSize: "11px", color: "#bbbbbb", fontFamily: font }}>
-              {formatDuration(upload.durationSeconds)}
-            </span>
-          )}
-          {upload.durationSeconds && upload.fileSizeBytes && (
-            <span style={{ color: "#e0e0e0", fontSize: "11px" }}>·</span>
-          )}
-          {upload.fileSizeBytes && (
-            <span style={{ fontSize: "11px", color: "#bbbbbb", fontFamily: font }}>
-              {formatSize(upload.fileSizeBytes)}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Timestamp */}
-      <div style={{ fontSize: "11px", color: "#bbbbbb", flexShrink: 0, fontFamily: font }}>
-        {formatRelative(upload.createdAt)}
+        {(upload.durationSeconds || upload.fileSizeBytes) && (
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {upload.durationSeconds && (
+              <span style={{ fontSize: "13px", color: "#888888", fontFamily: font }}>
+                {formatDuration(upload.durationSeconds)}
+              </span>
+            )}
+            {upload.durationSeconds && upload.fileSizeBytes && (
+              <span style={{ color: purple[100], fontSize: "11px" }}>·</span>
+            )}
+            {upload.fileSizeBytes && (
+              <span style={{ fontSize: "13px", color: "#888888", fontFamily: font }}>
+                {formatSize(upload.fileSizeBytes)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Status pill */}
@@ -289,19 +333,25 @@ function UploadRow({
             disabled={isRetrying}
             style={{
               background: "none",
-              border: "1px solid #e8e8e8",
+              border: `1px solid ${purple[100]}`,
               borderRadius: "7px",
               padding: "4px 10px",
               cursor: "pointer",
               fontSize: "11.5px",
               fontWeight: "600",
-              color: "#555555",
+              color: purple[600],
               fontFamily: font,
               opacity: isRetrying ? 0.5 : 1,
-              transition: "border-color 0.15s, opacity 0.15s",
+              transition: "border-color 0.15s, background 0.15s, opacity 0.15s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#bbbbbb")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#e8e8e8")}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = purple[200];
+              e.currentTarget.style.background = purple[50];
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = purple[100];
+              e.currentTarget.style.background = "none";
+            }}
           >
             {isRetrying ? "Retrying…" : "Retry"}
           </button>
@@ -329,6 +379,13 @@ function UploadRow({
             <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
           </svg>
         </button>
+
+        {/* Chevron */}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke={purple[200]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ flexShrink: 0 }}>
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
       </div>
     </div>
   );
@@ -366,101 +423,112 @@ function FilterBar({
       alignItems: "center",
       justifyContent: "space-between",
       gap: "12px",
-      marginBottom: "10px",
+      marginBottom: "16px",
       flexWrap: "wrap",
     }}>
-      <div style={{ display: "flex", gap: "2px" }}>
+      {/* Filter pills — matches meetings page exactly */}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
         {tabs.map((t) => {
-          const active = filterStatus === t.key;
+          const isActive = filterStatus === t.key;
           return (
             <button
               key={t.key}
               onClick={() => onFilterChange(t.key)}
               style={{
-                padding: "5px 12px",
-                borderRadius: "8px",
-                border: "none",
-                background: active ? "#111111" : "transparent",
-                color: active ? "#ffffff" : "#888888",
-                fontSize: "12.5px",
-                fontWeight: active ? "600" : "500",
-                fontFamily: font,
-                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "5px",
-                transition: "background 0.15s, color 0.15s",
+                padding: "5px 12px",
+                borderRadius: "20px",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontWeight: isActive ? "600" : "500",
+                fontFamily: font,
+                border: "1px solid",
+                borderColor: isActive ? purple[600] : purple[100],
+                background: isActive ? purple[600] : "#ffffff",
+                color: isActive ? "#ffffff" : purple[600],
+                transition: "all 0.15s",
+                boxShadow: isActive ? `0 1px 3px rgba(83,74,183,0.20)` : "none",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = purple[50];
+                  e.currentTarget.style.borderColor = purple[200];
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = "#ffffff";
+                  e.currentTarget.style.borderColor = purple[100];
+                }
               }}
             >
               {t.label}
-              {(counts[t.key] ?? 0) > 0 && (
-                <span style={{
-                  background: active ? "rgba(255,255,255,0.2)" : "#eeeeee",
-                  color: active ? "#ffffff" : "#888888",
-                  borderRadius: "10px",
-                  padding: "0 6px",
-                  fontSize: "10.5px",
-                  fontWeight: "700",
-                  lineHeight: "17px",
-                  display: "inline-block",
-                }}>
-                  {counts[t.key]}
-                </span>
-              )}
+              <span style={{
+                fontSize: "11px",
+                color: isActive ? "rgba(255,255,255,0.65)" : purple[400],
+              }}>
+                {counts[t.key] ?? 0}
+              </span>
             </button>
           );
         })}
       </div>
 
       <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        {/* Search */}
         <div style={{ position: "relative" }}>
           <svg
-            width="12" height="12" viewBox="0 0 24 24" fill="none"
-            stroke="#bbbbbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            style={{ position: "absolute", left: "9px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+            width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke={purple[400]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
           >
             <circle cx="11" cy="11" r="8"/>
             <line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input
             type="text"
-            placeholder="Search…"
+            placeholder="Search uploads…"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             style={{
-              padding: "6px 10px 6px 28px",
-              borderRadius: "8px",
-              border: "1px solid #e8e8e8",
-              fontSize: "12.5px",
+              padding: "9px 12px 9px 34px",
+              borderRadius: "10px",
+              border: `1px solid ${purple[100]}`,
+              fontSize: "13px",
               fontFamily: font,
-              color: "#111111",
+              color: "#111",
               background: "#ffffff",
               outline: "none",
               width: "170px",
+              boxShadow: `0 1px 3px rgba(83,74,183,0.06)`,
               transition: "border-color 0.15s",
             }}
-            onFocus={(e) => (e.target.style.borderColor = "#aaaaaa")}
-            onBlur={(e)  => (e.target.style.borderColor = "#e8e8e8")}
+            onFocus={(e) => (e.target.style.borderColor = purple[200])}
+            onBlur={(e)  => (e.target.style.borderColor = purple[100])}
           />
         </div>
 
+        {/* Sort */}
         <select
           value={sort}
           onChange={(e) => onSortChange(e.target.value as SortOption)}
           style={{
-            padding: "6px 10px",
-            borderRadius: "8px",
-            border: "1px solid #e8e8e8",
-            fontSize: "12.5px",
+            padding: "9px 12px",
+            borderRadius: "10px",
+            border: `1px solid ${purple[100]}`,
+            fontSize: "13px",
             fontFamily: font,
-            color: "#555555",
+            color: purple[800],
             background: "#ffffff",
             cursor: "pointer",
             outline: "none",
+            boxShadow: `0 1px 3px rgba(83,74,183,0.06)`,
           }}
         >
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
         </select>
       </div>
     </div>
@@ -471,30 +539,29 @@ function FilterBar({
 
 function SkeletonList() {
   return (
-    <div style={{
-      background: "#ffffff",
-      border: "1px solid #e8e8e8",
-      borderRadius: "14px",
-      overflow: "hidden",
-    }}>
-      {[1, 2, 3, 4].map((i) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+      {[1, 2, 3, 4, 5].map((i, idx, arr) => (
         <div
           key={i}
           style={{
-            padding: "13px 18px",
+            padding: "16px 20px",
+            background: "#ffffff",
+            border: `1px solid ${purple[100]}`,
+            borderRadius: idx === 0 ? "14px 14px 0 0"
+              : idx === arr.length - 1 ? "0 0 14px 14px"
+              : "0",
             display: "flex",
             alignItems: "center",
-            gap: "14px",
-            borderBottom: i < 4 ? "1px solid #f0f0f0" : "none",
+            gap: "16px",
           }}
         >
-          <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#f0f0f0", flexShrink: 0 }} />
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: purple[100], flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
-            <div style={{ width: `${120 + i * 40}px`, height: "13px", borderRadius: "6px", background: "#f0f0f0", marginBottom: "6px" }} />
-            <div style={{ width: `${80 + i * 20}px`, height: "10px", borderRadius: "6px", background: "#f5f5f5" }} />
+            <div style={{ width: `${120 + i * 40}px`, height: "13px", borderRadius: "6px", background: purple[50], marginBottom: "8px" }} />
+            <div style={{ width: `${80 + i * 20}px`, height: "11px", borderRadius: "6px", background: purple[50] }} />
           </div>
-          <div style={{ width: "48px", height: "10px", borderRadius: "6px", background: "#f5f5f5" }} />
-          <div style={{ width: "72px", height: "22px", borderRadius: "20px", background: "#f0f0f0" }} />
+          <div style={{ width: "48px", height: "11px", borderRadius: "6px", background: purple[50] }} />
+          <div style={{ width: "72px", height: "22px", borderRadius: "20px", background: purple[50] }} />
         </div>
       ))}
     </div>
@@ -506,23 +573,43 @@ function SkeletonList() {
 function EmptyState({ hasSearch, onImport }: { hasSearch: boolean; onImport: () => void }) {
   return (
     <div style={{
-      padding: "48px 24px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "72px 0",
       textAlign: "center",
-      background: "#ffffff",
-      border: "1px solid #e8e8e8",
-      borderRadius: "14px",
     }}>
-      <div style={{ fontSize: "32px", marginBottom: "10px" }}>
-        {hasSearch ? "🔍" : "📂"}
-      </div>
-      <div style={{ fontSize: "14px", fontWeight: "600", color: "#111111", marginBottom: "5px", fontFamily: font }}>
-        {hasSearch ? "No uploads found" : "No uploads yet"}
-      </div>
-      <div style={{ fontSize: "12px", color: "#999999", fontFamily: font, marginBottom: hasSearch ? 0 : "20px" }}>
+      <div style={{
+        width: "48px",
+        height: "48px",
+        borderRadius: "14px",
+        background: purple[50],
+        border: `1px solid ${purple[100]}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: "16px",
+      }}>
         {hasSearch
-          ? "Try a different search or clear filters."
-          : "Import an audio or video file to get started."}
+          ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={purple[400]} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+        }
       </div>
+      <p style={{ fontSize: "15px", fontWeight: "600", color: "#333", fontFamily: font, margin: "0 0 6px" }}>
+        {hasSearch ? "No uploads found" : "No uploads yet"}
+      </p>
+      <p style={{ fontSize: "13px", color: purple[400], fontFamily: font, margin: "0 0 24px" }}>
+        {hasSearch
+          ? "Try a different search term or clear filters."
+          : "Import an audio or video file to get started."}
+      </p>
       {!hasSearch && (
         <button
           onClick={onImport}
@@ -537,12 +624,19 @@ function EmptyState({ hasSearch, onImport }: { hasSearch: boolean; onImport: () 
             fontWeight: "600",
             fontFamily: font,
             border: "none",
-            background: "#111111",
+            background: purple[600],
             color: "#ffffff",
-            transition: "opacity 0.15s",
+            transition: "all 0.15s",
+            boxShadow: `0 1px 3px rgba(83,74,183,0.25)`,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = purple[800];
+            e.currentTarget.style.boxShadow = `0 2px 6px rgba(83,74,183,0.35)`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = purple[600];
+            e.currentTarget.style.boxShadow = `0 1px 3px rgba(83,74,183,0.25)`;
+          }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -596,17 +690,12 @@ export default function UploadsPage() {
   const totalSize     = uploads.reduce((s: number, r: any) => s + (r.fileSizeBytes   ?? 0), 0);
   const totalDuration = uploads.reduce((s: number, r: any) => s + (r.durationSeconds ?? 0), 0);
 
-  function handleUploadSuccess(meetingId: string) {
-    router.push(`/dashboard/meetings/${meetingId}`);
-  }
-
   return (
-    <div style={{ minHeight: "100vh", background: "#fafafa", fontFamily: font }}>
+    <div style={{ minHeight: "100vh", background: "#f5f4fb", fontFamily: font }}>
       <div style={{
-        padding: "40px 58px 32px 48px",
+        padding: "40px 58px 80px",
         boxSizing: "border-box",
         width: "100%",
-        transition: "padding 0.3s ease",
       }}>
 
         {/* ── Header ── */}
@@ -619,21 +708,21 @@ export default function UploadsPage() {
         }}>
           <div>
             <h1 style={{
-              fontSize: "24px",
+              fontSize: "22px",
               fontWeight: "700",
               color: "#111111",
-              letterSpacing: "-0.03em",
+              letterSpacing: "-0.025em",
               margin: "0 0 6px",
               fontFamily: font,
             }}>
               Uploads
             </h1>
-            <p style={{ fontSize: "14px", color: "#999999", margin: 0, fontFamily: font }}>
+            <p style={{ fontSize: "14px", color: "#888888", margin: 0, fontFamily: font }}>
               Audio and video files imported for transcription.
             </p>
           </div>
 
-          {/* Import button — matches QuickActions Import card */}
+          {/* Import button */}
           <button
             onClick={() => setShowUploadModal(true)}
             style={{
@@ -646,19 +735,19 @@ export default function UploadsPage() {
               fontSize: "13px",
               fontWeight: "600",
               fontFamily: font,
-              border: "1px solid #e8e8e8",
-              background: "#ffffff",
-              color: "#111111",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-              transition: "box-shadow 0.2s, border-color 0.2s",
+              border: "none",
+              background: purple[600],
+              color: "#ffffff",
+              boxShadow: `0 1px 3px rgba(83,74,183,0.25)`,
+              transition: "all 0.15s",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.10)";
-              e.currentTarget.style.borderColor = "#d0d0d0";
+              e.currentTarget.style.background = purple[800];
+              e.currentTarget.style.boxShadow = `0 2px 6px rgba(83,74,183,0.35)`;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)";
-              e.currentTarget.style.borderColor = "#e8e8e8";
+              e.currentTarget.style.background = purple[600];
+              e.currentTarget.style.boxShadow = `0 1px 3px rgba(83,74,183,0.25)`;
             }}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -679,8 +768,8 @@ export default function UploadsPage() {
           />
         )}
 
-        {/* ── Privacy badge — matches StatsCards.tsx ── */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "14px" }}>
+        {/* ── Privacy badge ── */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "20px" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
@@ -700,7 +789,7 @@ export default function UploadsPage() {
           counts={counts}
         />
 
-        {/* ── List — same white card container as RecentMeetings ── */}
+        {/* ── List ── */}
         {isLoading ? (
           <SkeletonList />
         ) : filtered.length === 0 ? (
@@ -709,16 +798,12 @@ export default function UploadsPage() {
             onImport={() => setShowUploadModal(true)}
           />
         ) : (
-          <div style={{
-            background: "#ffffff",
-            border: "1px solid #e8e8e8",
-            borderRadius: "14px",
-            overflow: "hidden",
-          }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
             {filtered.map((upload: any, idx: number) => (
               <UploadRow
                 key={upload.recordingId}
                 upload={upload}
+                isFirst={idx === 0}
                 isLast={idx === filtered.length - 1}
                 onOpen={() => {
                   if (upload.meetingId) router.push(`/dashboard/meetings/${upload.meetingId}`);
